@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './api/supabaseClient';
-import Navbar from './components/Navbar';
+import Navbar from './components/navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -26,7 +26,11 @@ export default function App() {
   }, []);
 
   async function fetchProfile(uuid) {
-    const { data } = await supabase.from('PERSONA').select('*').eq('supabase_uuid', uuid).single();
+    const { data, error } = await supabase.from('persona').select('*').eq('supabase_uuid', uuid).maybeSingle();
+    if (error) {
+      console.error("Errore nel recupero profilo:", error.message);
+    }
+    
     setProfile(data);
   }
 
