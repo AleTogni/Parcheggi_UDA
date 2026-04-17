@@ -19,11 +19,18 @@ export default function Home({ profile }) {
       const occupati = posti.filter(item => item.stato?.toLowerCase() === 'occupato').length;
       const ratio = occupati / (p.postitot || 1);
 
-      let color = "border-emerald-500 bg-emerald-50"; 
-      if (ratio >= 1) color = "border-red-500 bg-red-50"; 
-      else if (ratio >= 0.5) color = "border-blue-500 bg-blue-50"; 
+      let color = "border-emerald-500 bg-emerald-50 text-emerald-900"; 
+      let status = "Libero";
 
-      return { ...p, occupati, color, postiList: posti };
+      if (ratio >= 1) {
+        color = "border-red-500 bg-red-50 text-red-900"; 
+        status = "Completo";
+      } else if (ratio >= 0.5) {
+        color = "border-blue-500 bg-blue-50 text-blue-900"; 
+        status = "Quasi Pieno";
+      }
+
+      return { ...p, occupati, color, status, postiList: posti };
     });
     setParkings(merged);
   };
@@ -35,20 +42,20 @@ export default function Home({ profile }) {
 
   // LOGICA DI PRENOTAZIONE
   const handlePrenota = async (posto) => {
-    const targa = window.prompt("Inserisci la TARGA del tuo veicolo registrato:");
+    const targa = window.prompt("Inserisci la TARGA del tuo veicolo registrato per prenotare:");
     if (!targa) return;
 
-    // 1. Inserisci la prenotazione
+    // 1. Inserisci la prenotazione (usiamo l'ID REALE del database)
     const { error: errPren } = await supabase.from('prenotazione').insert([{
       idpersona: profile.idpersona,
       targa: targa.toUpperCase(),
-      idposto: posto.idposto,
+      idposto: posto.idposto, // <-- QUI IL DATABASE RICEVE L'ID VERO
       orarioinizio: new Date().toISOString(),
       stato: 'Attiva'
     }]);
 
     if (errPren) {
-      alert("Errore! Assicurati di aver registrato questa targa nel tuo Profilo prima di prenotare.");
+      alert("Errore! Assicurati di aver registrato questa targa nel tuo Profilo prima di prenotare.\n\nDettaglio: " + errPren.message);
       return;
     }
 
@@ -72,11 +79,14 @@ export default function Home({ profile }) {
           <div 
             key={p.idparcheggio} id={`card-${p.idparcheggio}`}
             onClick={() => setModalData(p)}
-            className={`p-6 rounded-2xl border-2 cursor-pointer transition-all ${p.color} ${selectedId === p.idparcheggio ? 'ring-4 ring-emerald-300 scale-105' : ''}`}
+            className={`p-6 rounded-2xl border-2 cursor-pointer transition-all ${p.color} ${selectedId === p.idparcheggio ? 'ring-4 ring-emerald-300 scale-105 shadow-lg' : 'hover:scale-105'}`}
           >
-            <h3 className="font-bold text-lg">{p.nome}</h3>
-            <p className="text-2xl font-black">{p.occupati} / {p.postitot}</p>
-            <p className="text-sm opacity-70 mt-2">Clicca per dettagli e prenotazioni</p>
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="font-bold text-lg">{p.nome}</h3>
+              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-white/50">{p.status}</span>
+            </div>
+            <p className="text-3xl font-black">{p.occupati} / {p.postitot}</p>
+            <p className="text-xs opacity-60 mt-2 italic">Clicca per dettagli e prenotazioni</p>
           </div>
         ))}
       </div>
@@ -85,28 +95,33 @@ export default function Home({ profile }) {
       {modalData && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[100] backdrop-blur-sm">
           <div className="bg-white p-8 rounded-3xl max-w-2xl w-full shadow-2xl relative">
-            <div className="flex justify-between mb-6">
-              <h2 className="text-3xl font-black">{modalData.nome}</h2>
-              <button onClick={() => setModalData(null)} className="text-3xl hover:text-red-500 font-bold">&times;</button>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-3xl font-black text-emerald-900">{modalData.nome}</h2>
+              <button onClick={() => setModalData(null)} className="text-3xl hover:text-red-500 font-bold transition">&times;</button>
             </div>
             
             <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-              {modalData.postiList.length === 0 && <p className="text-gray-500 italic">Nessun posto specifico inserito nel DB.</p>}
-              {modalData.postiList.map(posto => {
+              {modalData.postiList.length === 0 && <p className="text-gray-500 italic p-4 text-center">Nessun posto specifico inserito nel DB per questo parcheggio.</p>}
+              
+              {/* QUI È DOVE AVVIENE LA MAGIA: AGGIUNTO 'index' */}
+              {modalData.postiList.map((posto, index) => {
                 const isOccupato = posto.stato?.toLowerCase() === 'occupato';
                 return (
                   <div key={posto.idposto} className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div>
-                      <span className="font-bold block">Posto N° {posto.idposto} <span className="text-gray-500 font-normal">({posto.piano})</span></span>
-                      <span className="text-sm">Tipo: <b>{posto.tipoposto}</b></span>
+                      {/* QUI USIAMO L'INDICE INVECE DELL'ID DEL DATABASE */}
+                      <span className="font-bold block text-lg text-gray-800">
+                        Posto N° {index + 1} <span className="text-gray-500 font-normal text-sm">({posto.piano})</span>
+                      </span>
+                      <span className="text-sm text-gray-600">Tipo: <b>{posto.tipoposto}</b></span>
                     </div>
                     
                     <div className="flex items-center gap-4">
-                      <span className={`px-3 py-1 rounded-full text-sm font-bold ${isOccupato ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                        {posto.stato}
+                      <span className={`px-3 py-1 rounded-full text-sm font-bold shadow-sm ${isOccupato ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {posto.stato || 'Sconosciuto'}
                       </span>
                       {!isOccupato && (
-                        <button onClick={() => handlePrenota(posto)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold">
+                        <button onClick={() => handlePrenota(posto)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-bold shadow transition active:scale-95">
                           Prenota
                         </button>
                       )}
