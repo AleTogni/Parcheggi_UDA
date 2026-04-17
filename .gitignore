@@ -1,24 +1,25 @@
-# Logs
-logs
-*.log
+# Dipendenze
+/node_modules
+/.pnp
+.pnp.js
+
+# Cartelle di build (es. Vite o Create React App)
+/dist
+/build
+
+# Variabili d'ambiente (MOLTO IMPORTANTE: non pushare mai le chiavi di Supabase!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# File di log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# File di sistema (Mac/Windows)
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
