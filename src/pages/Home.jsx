@@ -13,7 +13,6 @@ export default function Home({ profile }) {
   const [bookingStart, setBookingStart] = useState('');
   const [bookingEnd, setBookingEnd] = useState('');
   
-  // Gestione messaggi UI invece degli alert
   const [uiMessage, setUiMessage] = useState({ text: '', type: '' });
 
   const nowStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -53,85 +52,110 @@ export default function Home({ profile }) {
     setTimeout(() => setUiMessage({ text: '', type: '' }), 4000);
   };
 
-const handleConfirmBooking = async () => {
-  if (!selectedTarga || !bookingStart || !bookingEnd) return showMessage("Dati incompleti.");
+  const handleConfirmBooking = async () => {
+    let targaFinale = selectedTarga;
 
-  // 1. RECUPERIAMO IL VEICOLO SELEZIONATO PER CONTROLLARE L'ALIMENTAZIONE
-  const veicoloScelto = userVehicles.find(v => v.targa === selectedTarga);
+    if (userVehicles.length === 0) {
+      if (!nuovaTarga || nuovaTarga.length < 5) return showMessage("Inserisci una targa valida.");
+      targaFinale = nuovaTarga.toUpperCase();
+      await supabase.from('veicolo').insert([{ idpersona: profile.idpersona, targa: targaFinale, alimentazione: 'Termica' }]);
+      loadUserVehicles();
+    } else {
+      if (!targaFinale) return showMessage("Seleziona un veicolo.");
+    }
 
-  // 2. CONTROLLO LIMITAZIONI POSTO
-  if (bookingSpot.tipoposto === 'Disabili' && !profile.is_disabile) {
-    return showMessage("Questo posto è riservato a possessori di Pass Disabili.");
-  }
-  
-  if (bookingSpot.tipoposto === 'Elettrico' && veicoloScelto?.alimentazione !== 'Elettrica') {
-    return showMessage("Puoi prenotare questo posto solo con un veicolo Elettrico.");
-  }
+    if (!bookingStart || !bookingEnd) return showMessage("Inserisci arrivo e uscita.");
 
-  const startDate = new Date(bookingStart);
-  const endDate = new Date(bookingEnd);
-  
-  if (startDate < new Date()) return showMessage("L'orario è già passato.");
-  if (endDate <= startDate) return showMessage("L'uscita deve essere dopo l'arrivo.");
+    // RECUPERIAMO IL VEICOLO PER I CONTROLLI
+    const veicoloScelto = userVehicles.find(v => v.targa === targaFinale);
 
-  const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    // CONTROLLI LIMITAZIONI POSTO
+    if (bookingSpot.tipoposto === 'Disabili' && !profile.is_disabile) {
+      return showMessage("Riservato ai possessori di Pass Disabili.");
+    }
+    if (bookingSpot.tipoposto === 'Elettrico' && veicoloScelto?.alimentazione !== 'Elettrica') {
+      return showMessage("Riservato ai veicoli con alimentazione Elettrica.");
+    }
 
-  // FIX TIMEZONE: Salviamo l'orario includendo il fuso orario locale
-  const { error: errPren } = await supabase.from('prenotazione').insert([{
-    idpersona: profile.idpersona,
-    targa: selectedTarga,
-    idposto: bookingSpot.idposto,
-    codice_accesso: accessCode,
-    orarioinizio: startDate.toLocaleString('sv-SE').replace(' ', 'T'), // Formato ISO locale
-    orariofine: endDate.toLocaleString('sv-SE').replace(' ', 'T'),
-    stato: 'Attiva'
-  }]);
+    const startDate = new Date(bookingStart);
+    const endDate = new Date(bookingEnd);
+    
+    if (startDate < new Date()) return showMessage("L'orario è già passato.");
+    if (endDate <= startDate) return showMessage("L'uscita deve essere dopo l'arrivo.");
 
-  if (errPren) return showMessage(errPren.message);
+    const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-  await supabase.from('posto_auto').update({ stato: 'Occupato' }).eq('idposto', bookingSpot.idposto);
-  
-  showMessage(`Sosta confermata! Codice: ${accessCode}`, 'success');
-  
-  setTimeout(() => {
-    setBookingStart(''); setBookingEnd(''); setBookingSpot(null); setModalData(null);
-    loadData();
-  }, 2000);
-};
+    // SALVATAGGIO CON FIX TIMEZONE (sv-SE)
+    const { error: errPren } = await supabase.from('prenotazione').insert([{
+      idpersona: profile.idpersona,
+      targa: targaFinale,
+      idposto: bookingSpot.idposto,
+      codice_accesso: accessCode,
+      orarioinizio: startDate.toLocaleString('sv-SE').replace(' ', 'T'),
+      orariofine: endDate.toLocaleString('sv-SE').replace(' ', 'T'),
+      stato: 'Attiva'
+    }]);
+
+    if (errPren) return showMessage(errPren.message);
+
+    await supabase.from('posto_auto').update({ stato: 'Occupato' }).eq('idposto', bookingSpot.idposto);
+    
+    showMessage(`Sosta confermata! Codice: ${accessCode}`, 'success');
+    
+    setTimeout(() => {
+      setBookingStart(''); setBookingEnd(''); setBookingSpot(null); setModalData(null);
+      loadData();
+    }, 2000);
+  };
+
+  const closeModal = () => {
+    setModalData(null); 
+    setBookingSpot(null); 
+    setUiMessage({text:'', type:''});
+    setBookingStart('');
+    setBookingEnd('');
+  };
 
   return (
     <div className="max-w-6xl mx-auto p-6 relative z-0">
-      <h1 className="text-3xl font-black mb-8 text-gray-800 italic">Brescia <span className="text-emerald-600">Green Park</span></h1>
+      <h1 className="text-3xl font-black mb-8 text-gray-800 tracking-tight">Brescia <span className="text-emerald-600">Green Park</span></h1>
       
       <ParkingMap parkings={parkings} onMarkerClick={(id) => setModalData(parkings.find(p => p.idparcheggio === id))} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {parkings.map(p => (
-          <div key={p.idparcheggio} onClick={() => setModalData(p)} className={`p-6 rounded-2xl border-2 cursor-pointer transition-all hover:scale-105 shadow-sm ${p.color}`}>
-            <h3 className="font-bold text-lg">{p.nome}</h3>
-            <p className="text-3xl font-black">{p.occupati} / {p.postitot}</p>
-            <p className="text-xs opacity-60 mt-2">Dettagli e prenotazioni</p>
+          <div key={p.idparcheggio} onClick={() => setModalData(p)} className={`p-6 rounded-3xl border-2 cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg ${p.color}`}>
+            <h3 className="font-bold text-xl mb-1">{p.nome}</h3>
+            <p className="text-4xl font-black">{p.occupati} <span className="text-xl font-medium opacity-60">/ {p.postitot}</span></p>
+            <p className="text-sm font-bold opacity-70 mt-2">Dettagli e prenotazioni &rarr;</p>
           </div>
         ))}
       </div>
 
+      {/* MODALE CON CHIUSURA SU CLICK ESTERNO */}
       {modalData && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[100] backdrop-blur-sm">
-          <div className="bg-white p-8 rounded-3xl max-w-2xl w-full shadow-2xl relative">
-            <button onClick={() => {setModalData(null); setBookingSpot(null); setUiMessage({text:'', type:''})}} className="absolute top-6 right-6 text-3xl font-bold text-gray-400 hover:text-gray-800">&times;</button>
+        <div 
+          onClick={closeModal} 
+          className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[100]"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()} 
+            className="bg-white p-8 rounded-[2rem] max-w-2xl w-full shadow-2xl relative cursor-default"
+          >
+            <button onClick={closeModal} className="absolute top-6 right-6 text-3xl font-bold text-gray-400 hover:text-gray-800 transition-colors">&times;</button>
             
-            <h2 className="text-3xl font-black text-emerald-900 mb-6">{modalData.nome}</h2>
+            <h2 className="text-3xl font-black text-gray-900 mb-6">{modalData.nome}</h2>
 
             {!bookingSpot ? (
-              <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
                 {modalData.postiList.map((posto, index) => (
-                  <div key={posto.idposto} className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div key={posto.idposto} className="flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 transition-colors rounded-2xl border border-gray-100">
                     <div>
-                      <span className="font-bold block text-lg">Posto N° {index + 1}</span>
-                      <span className="text-sm text-gray-500">{posto.tipoposto} • {posto.piano}</span>
+                      <span className="font-black block text-lg text-gray-800">Posto N° {index + 1}</span>
+                      <span className="text-sm text-gray-500 font-medium">{posto.tipoposto} • {posto.piano}</span>
                     </div>
                     {posto.stato?.toLowerCase() === 'libero' ? (
-                      <button onClick={() => setBookingSpot(posto)} className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-emerald-700 transition">Seleziona</button>
+                      <button onClick={() => setBookingSpot(posto)} className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold shadow-sm hover:bg-emerald-700 hover:shadow transition-all">Seleziona</button>
                     ) : (
                       <span className="px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-bold uppercase text-xs">Occupato</span>
                     )}
@@ -139,50 +163,48 @@ const handleConfirmBooking = async () => {
                 ))}
               </div>
             ) : (
-              <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-200">
-                <h3 className="text-xl font-bold mb-4 text-emerald-800">Dettagli Sosta</h3>
+              <div className="bg-white p-1 rounded-2xl">
+                <h3 className="text-2xl font-black mb-6 text-gray-800">Conferma Sosta</h3>
                 
                 {uiMessage.text && (
-                  <div className={`p-3 rounded-lg mb-4 font-bold text-sm ${uiMessage.type === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                  <div className={`p-4 rounded-xl mb-6 font-bold text-sm shadow-sm ${uiMessage.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
                     {uiMessage.text}
                   </div>
                 )}
 
-                <div className="space-y-4 mb-6">
+                <div className="space-y-5 mb-8">
                   <div>
-                    <label className="block text-sm font-bold text-emerald-800 mb-1">Veicolo</label>
+                    <label className="block text-sm font-bold text-gray-600 mb-2">Veicolo</label>
                     {userVehicles.length > 0 ? (
-                      <select value={selectedTarga} onChange={(e) => setSelectedTarga(e.target.value)} className="w-full p-3 rounded-xl border border-emerald-200 bg-white font-bold">
-                        {userVehicles.map(v => <option key={v.targa} value={v.targa}>{v.targa}</option>)}
+                      <select value={selectedTarga} onChange={(e) => setSelectedTarga(e.target.value)} className="w-full p-4 rounded-xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-emerald-500 font-bold text-gray-800 transition-all outline-none">
+                        {userVehicles.map(v => <option key={v.targa} value={v.targa}>{v.targa} ({v.alimentazione})</option>)}
                       </select>
                     ) : (
                       <input 
-                        type="text" 
-                        placeholder="Inserisci Targa (es. AB123CD)" 
-                        value={nuovaTarga} 
-                        onChange={(e) => setNuovaTarga(e.target.value)}
-                        className="w-full p-3 rounded-xl border border-emerald-200 bg-white font-bold uppercase"
+                        type="text" placeholder="Inserisci Targa (es. AB123CD)" 
+                        value={nuovaTarga} onChange={(e) => setNuovaTarga(e.target.value)}
+                        className="w-full p-4 rounded-xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-emerald-500 font-bold uppercase text-gray-800 transition-all outline-none"
                       />
                     )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-emerald-800 mb-1">Arrivo</label>
-                      <input type="datetime-local" min={nowStr} value={bookingStart} onChange={(e) => setBookingStart(e.target.value)} className="w-full p-3 rounded-xl border border-emerald-200 bg-white font-bold text-sm text-gray-700" />
+                      <label className="block text-sm font-bold text-gray-600 mb-2">Arrivo</label>
+                      <input type="datetime-local" min={nowStr} value={bookingStart} onChange={(e) => setBookingStart(e.target.value)} className="w-full p-4 rounded-xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-emerald-500 font-bold text-sm text-gray-800 transition-all outline-none" />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-emerald-800 mb-1">Uscita</label>
-                      <input type="datetime-local" min={bookingStart || nowStr} value={bookingEnd} onChange={(e) => setBookingEnd(e.target.value)} className="w-full p-3 rounded-xl border border-emerald-200 bg-white font-bold text-sm text-gray-700" />
+                      <label className="block text-sm font-bold text-gray-600 mb-2">Uscita</label>
+                      <input type="datetime-local" min={bookingStart || nowStr} value={bookingEnd} onChange={(e) => setBookingEnd(e.target.value)} className="w-full p-4 rounded-xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-emerald-500 font-bold text-sm text-gray-800 transition-all outline-none" />
                     </div>
                   </div>
                 </div>
 
                 <div className="flex gap-3">
-                  <button onClick={handleConfirmBooking} className="flex-1 bg-emerald-600 text-white py-3 rounded-2xl font-black hover:bg-emerald-700">
+                  <button onClick={handleConfirmBooking} className="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-black text-lg hover:bg-emerald-700 hover:shadow-lg transition-all">
                     Conferma
                   </button>
-                  <button onClick={() => {setBookingSpot(null); setUiMessage({text:'', type:''})}} className="px-6 bg-transparent border border-emerald-600 text-emerald-700 rounded-2xl font-bold hover:bg-emerald-100">
+                  <button onClick={() => {setBookingSpot(null); setUiMessage({text:'', type:''})}} className="px-8 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-all">
                     Indietro
                   </button>
                 </div>
