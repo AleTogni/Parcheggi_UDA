@@ -5,7 +5,8 @@ import Navbar from './components/navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Profile from './pages/profile';
+import Profile from './pages/Profile';
+import AdminDashboard from './pages/AdminDashboard'; // IMPORTIAMO L'ADMIN
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -26,11 +27,7 @@ export default function App() {
   }, []);
 
   async function fetchProfile(uuid) {
-    const { data, error } = await supabase.from('persona').select('*').eq('supabase_uuid', uuid).maybeSingle();
-    if (error) {
-      console.error("Errore nel recupero profilo:", error.message);
-    }
-    
+    const { data } = await supabase.from('persona').select('*').eq('supabase_uuid', uuid).maybeSingle();
     setProfile(data);
   }
 
@@ -42,6 +39,9 @@ export default function App() {
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
         <Route path="/register" element={!session ? <Register /> : <Navigate to="/" />} />
         <Route path="/profile" element={session ? <Profile profile={profile} /> : <Navigate to="/login" />} />
+        
+        {/* ROTTA PROTETTA: Solo se sei admin entri, altrimenti torni alla Home */}
+        <Route path="/admin" element={profile?.ruolo === 'admin' ? <AdminDashboard profile={profile} /> : <Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );
