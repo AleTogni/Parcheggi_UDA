@@ -53,50 +53,51 @@ export default function Home({ profile }) {
     setTimeout(() => setUiMessage({ text: '', type: '' }), 4000);
   };
 
-  const handleConfirmBooking = async () => {
-    let targaFinale = selectedTarga;
+const handleConfirmBooking = async () => {
+  if (!selectedTarga || !bookingStart || !bookingEnd) return showMessage("Dati incompleti.");
 
-    if (userVehicles.length === 0) {
-      if (!nuovaTarga || nuovaTarga.length < 5) return showMessage("Inserisci una targa valida.");
-      targaFinale = nuovaTarga.toUpperCase();
-      // Salviamo la targa al volo nel database
-      await supabase.from('veicolo').insert([{ idpersona: profile.idpersona, targa: targaFinale }]);
-      loadUserVehicles();
-    } else {
-      if (!targaFinale) return showMessage("Seleziona un veicolo.");
-    }
+  // 1. RECUPERIAMO IL VEICOLO SELEZIONATO PER CONTROLLARE L'ALIMENTAZIONE
+  const veicoloScelto = userVehicles.find(v => v.targa === selectedTarga);
 
-    if (!bookingStart || !bookingEnd) return showMessage("Inserisci arrivo e uscita.");
+  // 2. CONTROLLO LIMITAZIONI POSTO
+  if (bookingSpot.tipoposto === 'Disabili' && !profile.is_disabile) {
+    return showMessage("Questo posto è riservato a possessori di Pass Disabili.");
+  }
+  
+  if (bookingSpot.tipoposto === 'Elettrico' && veicoloScelto?.alimentazione !== 'Elettrica') {
+    return showMessage("Puoi prenotare questo posto solo con un veicolo Elettrico.");
+  }
 
-    const startDate = new Date(bookingStart);
-    const endDate = new Date(bookingEnd);
-    
-    if (startDate < new Date()) return showMessage("L'orario è già passato.");
-    if (endDate <= startDate) return showMessage("L'uscita deve essere dopo l'arrivo.");
+  const startDate = new Date(bookingStart);
+  const endDate = new Date(bookingEnd);
+  
+  if (startDate < new Date()) return showMessage("L'orario è già passato.");
+  if (endDate <= startDate) return showMessage("L'uscita deve essere dopo l'arrivo.");
 
-    const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    const { error: errPren } = await supabase.from('prenotazione').insert([{
-      idpersona: profile.idpersona,
-      targa: targaFinale,
-      idposto: bookingSpot.idposto,
-      codice_accesso: accessCode,
-      orarioinizio: startDate.toISOString(),
-      orariofine: endDate.toISOString(),
-      stato: 'Attiva'
-    }]);
+  // FIX TIMEZONE: Salviamo l'orario includendo il fuso orario locale
+  const { error: errPren } = await supabase.from('prenotazione').insert([{
+    idpersona: profile.idpersona,
+    targa: selectedTarga,
+    idposto: bookingSpot.idposto,
+    codice_accesso: accessCode,
+    orarioinizio: startDate.toLocaleString('sv-SE').replace(' ', 'T'), // Formato ISO locale
+    orariofine: endDate.toLocaleString('sv-SE').replace(' ', 'T'),
+    stato: 'Attiva'
+  }]);
 
-    if (errPren) return showMessage(errPren.message);
+  if (errPren) return showMessage(errPren.message);
 
-    await supabase.from('posto_auto').update({ stato: 'Occupato' }).eq('idposto', bookingSpot.idposto);
-    
-    showMessage(`Sosta confermata! Codice: ${accessCode}`, 'success');
-    
-    setTimeout(() => {
-      setBookingStart(''); setBookingEnd(''); setBookingSpot(null); setModalData(null);
-      loadData();
-    }, 2000);
-  };
+  await supabase.from('posto_auto').update({ stato: 'Occupato' }).eq('idposto', bookingSpot.idposto);
+  
+  showMessage(`Sosta confermata! Codice: ${accessCode}`, 'success');
+  
+  setTimeout(() => {
+    setBookingStart(''); setBookingEnd(''); setBookingSpot(null); setModalData(null);
+    loadData();
+  }, 2000);
+};
 
   return (
     <div className="max-w-6xl mx-auto p-6 relative z-0">
