@@ -15,6 +15,9 @@ export default function Home({ profile }) {
   
   const [uiMessage, setUiMessage] = useState({ text: '', type: '' });
 
+  // COSTANTE TARIFFA (Es. 2.00 Euro all'ora)
+  const tariffaOraria = 2.00; 
+
   const nowStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
   useEffect(() => { 
@@ -52,6 +55,18 @@ export default function Home({ profile }) {
     setTimeout(() => setUiMessage({ text: '', type: '' }), 4000);
   };
 
+  // CALCOLO PREVENTIVO IN TEMPO REALE
+  let preventivo = 0;
+  let oreSosta = 0;
+  if (bookingStart && bookingEnd) {
+    const start = new Date(bookingStart);
+    const end = new Date(bookingEnd);
+    if (end > start) {
+      oreSosta = (end - start) / (1000 * 60 * 60); // Differenza in ore
+      preventivo = (oreSosta * tariffaOraria).toFixed(2);
+    }
+  }
+
   const handleConfirmBooking = async () => {
     let targaFinale = selectedTarga;
 
@@ -66,10 +81,8 @@ export default function Home({ profile }) {
 
     if (!bookingStart || !bookingEnd) return showMessage("Inserisci arrivo e uscita.");
 
-    // RECUPERIAMO IL VEICOLO PER I CONTROLLI
     const veicoloScelto = userVehicles.find(v => v.targa === targaFinale);
 
-    // CONTROLLI LIMITAZIONI POSTO
     if (bookingSpot.tipoposto === 'Disabili' && !profile.is_disabile) {
       return showMessage("Riservato ai possessori di Pass Disabili.");
     }
@@ -85,15 +98,15 @@ export default function Home({ profile }) {
 
     const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    // SALVATAGGIO CON FIX TIMEZONE (sv-SE)
     const { error: errPren } = await supabase.from('prenotazione').insert([{
       idpersona: profile.idpersona,
       targa: targaFinale,
       idposto: bookingSpot.idposto,
-      codice_accesso: accessCode,
+      codiceaccesso: accessCode, // <-- BUG RISOLTO
       orarioinizio: startDate.toLocaleString('sv-SE').replace(' ', 'T'),
       orariofine: endDate.toLocaleString('sv-SE').replace(' ', 'T'),
-      stato: 'Attiva'
+      stato: 'Attiva',
+      costo: preventivo // <-- SALVATAGGIO PREZZO
     }]);
 
     if (errPren) return showMessage(errPren.message);
@@ -102,10 +115,7 @@ export default function Home({ profile }) {
     
     showMessage(`Sosta confermata! Codice: ${accessCode}`, 'success');
     
-    setTimeout(() => {
-      setBookingStart(''); setBookingEnd(''); setBookingSpot(null); setModalData(null);
-      loadData();
-    }, 2000);
+    setTimeout(() => { closeModal(); loadData(); }, 2000);
   };
 
   const closeModal = () => {
@@ -132,22 +142,15 @@ export default function Home({ profile }) {
         ))}
       </div>
 
-      {/* MODALE CON CHIUSURA SU CLICK ESTERNO */}
       {modalData && (
-        <div 
-          onClick={closeModal} 
-          className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[100]"
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()} 
-            className="bg-white p-8 rounded-[2rem] max-w-2xl w-full shadow-2xl relative cursor-default"
-          >
+        <div onClick={closeModal} className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white p-8 rounded-[2rem] max-w-2xl w-full shadow-2xl relative cursor-default">
             <button onClick={closeModal} className="absolute top-6 right-6 text-3xl font-bold text-gray-400 hover:text-gray-800 transition-colors">&times;</button>
             
             <h2 className="text-3xl font-black text-gray-900 mb-6">{modalData.nome}</h2>
 
             {!bookingSpot ? (
-              <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+              <div className="space-y-3 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {modalData.postiList.map((posto, index) => (
                   <div key={posto.idposto} className="flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 transition-colors rounded-2xl border border-gray-100">
                     <div>
@@ -155,7 +158,7 @@ export default function Home({ profile }) {
                       <span className="text-sm text-gray-500 font-medium">{posto.tipoposto} • {posto.piano}</span>
                     </div>
                     {posto.stato?.toLowerCase() === 'libero' ? (
-                      <button onClick={() => setBookingSpot(posto)} className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold shadow-sm hover:bg-emerald-700 hover:shadow transition-all">Seleziona</button>
+                      <button onClick={() => setBookingSpot(posto)} className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold shadow-sm hover:bg-emerald-700 transition-all">Seleziona</button>
                     ) : (
                       <span className="px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-bold uppercase text-xs">Occupato</span>
                     )}
@@ -163,50 +166,53 @@ export default function Home({ profile }) {
                 ))}
               </div>
             ) : (
-              <div className="bg-white p-1 rounded-2xl">
+              <div className="bg-white rounded-2xl flex flex-col h-[400px]">
                 <h3 className="text-2xl font-black mb-6 text-gray-800">Conferma Sosta</h3>
                 
                 {uiMessage.text && (
-                  <div className={`p-4 rounded-xl mb-6 font-bold text-sm shadow-sm ${uiMessage.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                  <div className={`p-4 rounded-xl mb-4 font-bold text-sm shadow-sm ${uiMessage.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
                     {uiMessage.text}
                   </div>
                 )}
 
-                <div className="space-y-5 mb-8">
+                <div className="space-y-4 mb-auto">
                   <div>
-                    <label className="block text-sm font-bold text-gray-600 mb-2">Veicolo</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Veicolo Selezionato</label>
                     {userVehicles.length > 0 ? (
-                      <select value={selectedTarga} onChange={(e) => setSelectedTarga(e.target.value)} className="w-full p-4 rounded-xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-emerald-500 font-bold text-gray-800 transition-all outline-none">
+                      <select value={selectedTarga} onChange={(e) => setSelectedTarga(e.target.value)} className="w-full p-3 rounded-xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-emerald-500 font-bold text-gray-800 outline-none">
                         {userVehicles.map(v => <option key={v.targa} value={v.targa}>{v.targa} ({v.alimentazione})</option>)}
                       </select>
                     ) : (
-                      <input 
-                        type="text" placeholder="Inserisci Targa (es. AB123CD)" 
-                        value={nuovaTarga} onChange={(e) => setNuovaTarga(e.target.value)}
-                        className="w-full p-4 rounded-xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-emerald-500 font-bold uppercase text-gray-800 transition-all outline-none"
-                      />
+                      <input type="text" placeholder="Targa (es. AB123CD)" value={nuovaTarga} onChange={(e) => setNuovaTarga(e.target.value)} className="w-full p-3 rounded-xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-emerald-500 font-bold uppercase text-gray-800 outline-none" />
                     )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-gray-600 mb-2">Arrivo</label>
-                      <input type="datetime-local" min={nowStr} value={bookingStart} onChange={(e) => setBookingStart(e.target.value)} className="w-full p-4 rounded-xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-emerald-500 font-bold text-sm text-gray-800 transition-all outline-none" />
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Arrivo Stimato</label>
+                      <input type="datetime-local" min={nowStr} value={bookingStart} onChange={(e) => setBookingStart(e.target.value)} className="w-full p-3 rounded-xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-emerald-500 font-bold text-sm text-gray-800 outline-none" />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-600 mb-2">Uscita</label>
-                      <input type="datetime-local" min={bookingStart || nowStr} value={bookingEnd} onChange={(e) => setBookingEnd(e.target.value)} className="w-full p-4 rounded-xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-emerald-500 font-bold text-sm text-gray-800 transition-all outline-none" />
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Uscita Prevista</label>
+                      <input type="datetime-local" min={bookingStart || nowStr} value={bookingEnd} onChange={(e) => setBookingEnd(e.target.value)} className="w-full p-3 rounded-xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-emerald-500 font-bold text-sm text-gray-800 outline-none" />
                     </div>
                   </div>
+
+                  {/* RIQUADRO PREVENTIVO DINAMICO */}
+                  {preventivo > 0 && (
+                    <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex justify-between items-center mt-2">
+                      <div>
+                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Costo Stimato</p>
+                        <p className="text-xs font-medium text-emerald-800 mt-1">Tariffa: {tariffaOraria.toFixed(2)}€ / h</p>
+                      </div>
+                      <p className="text-2xl font-black text-emerald-900">{preventivo} €</p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex gap-3">
-                  <button onClick={handleConfirmBooking} className="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-black text-lg hover:bg-emerald-700 hover:shadow-lg transition-all">
-                    Conferma
-                  </button>
-                  <button onClick={() => {setBookingSpot(null); setUiMessage({text:'', type:''})}} className="px-8 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-all">
-                    Indietro
-                  </button>
+                <div className="flex gap-3 mt-4">
+                  <button onClick={handleConfirmBooking} className="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-black text-lg hover:bg-emerald-700 transition-all">Paga e Conferma</button>
+                  <button onClick={() => {setBookingSpot(null); setUiMessage({text:'', type:''})}} className="px-8 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-all">Indietro</button>
                 </div>
               </div>
             )}

@@ -26,7 +26,6 @@ export default function Register() {
         console.error(dbError);
         alert("Errore salvataggio profilo: " + dbError.message);
       } else {
-        alert("Benvenuto!");
         navigate("/");
       }
     }
