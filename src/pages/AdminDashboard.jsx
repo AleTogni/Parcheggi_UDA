@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../api/supabaseClient';
+// Librerie per il grafico
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function AdminDashboard({ profile }) {
   const [stats, setStats] = useState({ utenti: 0, parcheggi: 0, posti: 0, attive: 0, totaliValide: 0 });
@@ -15,7 +17,12 @@ export default function AdminDashboard({ profile }) {
   const [allBookingsData, setAllBookingsData] = useState([]);
   const [confirmCancelId, setConfirmCancelId] = useState(null);
 
-  useEffect(() => { loadDashboardData(); }, []);
+  // NUOVI STATI PER IL GRAFICO REALE
+  const [chartData, setChartData] = useState([]);
+  const [chartView, setChartView] = useState('settimana');
+
+  // AGGIORNATO: L'useEffect ora si riattiva anche quando cambi vista (settimana/mese/tutto)
+  useEffect(() => { loadDashboardData(); }, [chartView]);
 
   const loadDashboardData = async () => {
     const { count: u } = await supabase.from('persona').select('*', { count: 'exact', head: true });
@@ -24,9 +31,58 @@ export default function AdminDashboard({ profile }) {
     const { count: val } = await supabase.from('prenotazione').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
     const { data: p } = await supabase.from('parcheggio').select('*').order('nome');
     
+    // NUOVO: Recupero tutte le prenotazioni per popolare il grafico
+    const { data: allPreno } = await supabase.from('prenotazione').select('orarioinizio, costo');
+    if (allPreno) {
+      setChartData(processDataForChart(allPreno, chartView));
+    }
+
     setStats({ utenti: u || 0, parcheggi: p?.length || 0, posti: po || 0, attive: at || 0, totaliValide: val || 0 });
     setListaParcheggi(p || []);
-    if (p && p.length > 0) setNewSpot(prev => ({ ...prev, idparcheggio: p[0].idparcheggio }));
+    if (p && p.length > 0 && !newSpot.idparcheggio) setNewSpot(prev => ({ ...prev, idparcheggio: p[0].idparcheggio }));
+  };
+
+  // NUOVA FUNZIONE: Trasforma i dati crudi di Supabase in punti per il grafico
+  const processDataForChart = (data, view) => {
+    const now = new Date();
+    let startDate = new Date();
+    let groupBy = 'day';
+
+    if (view === 'settimana') startDate.setDate(now.getDate() - 7);
+    else if (view === 'mese') startDate.setDate(now.getDate() - 30);
+    else { startDate = new Date(0); groupBy = 'month'; } // Storico completo
+
+    const filtered = data.filter(d => new Date(d.orarioinizio) >= startDate);
+    const map = {};
+
+    // Crea la linea temporale vuota (per evitare buchi nel grafico se un giorno non ha soste)
+    if (view === 'settimana' || view === 'mese') {
+      const daysToGenerate = view === 'settimana' ? 7 : 30;
+      for (let i = daysToGenerate; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+        map[key] = { label: key, co2: 0, soste: 0 };
+      }
+    }
+
+    // Riempie la linea temporale con i dati reali
+    filtered.forEach(p => {
+      const date = new Date(p.orarioinizio);
+      const key = groupBy === 'day' 
+        ? date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
+        : date.toLocaleDateString('it-IT', { month: 'short', year: '2-digit' });
+
+      if (!map[key]) map[key] = { label: key, co2: 0, soste: 0 };
+      map[key].soste += 1;
+      // Il calcolo della CO2 si basa sul costo: ogni euro speso equivale a ore di sosta * fattore ambientale
+      map[key].co2 += parseFloat((parseFloat(p.costo || 0) * 0.25 * 2.5).toFixed(2));
+    });
+
+    return Object.values(map).map(item => ({
+      ...item,
+      co2: parseFloat(item.co2.toFixed(1))
+    }));
   };
 
   const showMessage = (msg) => {
@@ -136,10 +192,10 @@ export default function AdminDashboard({ profile }) {
         </div>
       </div>
 
-      {/* TRE COLONNE UFFICIALI E FORMALI */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* RIGA FORM E IMPATTO */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         
-        {/* COLONNA 1 */}
+        {/* COLONNA 1: NUOVO IMPIANTO */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col hover:border-gray-300 transition-colors">
           <h2 className="text-lg font-bold text-emerald-900 mb-6 border-b border-gray-100 pb-3">Registra Nuovo Impianto</h2>
           <form onSubmit={handleAddParking} className="space-y-4 flex-grow flex flex-col">
@@ -171,14 +227,14 @@ export default function AdminDashboard({ profile }) {
               </div>
             </div>
             <div className="mt-auto pt-4">
-              <button type="submit" className="w-full bg-gray-800 text-white font-bold py-3 rounded-lg hover:bg-gray-900 transition-all">
+              <button type="submit" className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 rounded-lg transition-all">
                 Salva Impianto
               </button>
             </div>
           </form>
         </div>
 
-        {/* COLONNA 2 */}
+        {/* COLONNA 2: NUOVO STALLO */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col hover:border-gray-300 transition-colors">
           <h2 className="text-lg font-bold text-emerald-900 mb-6 border-b border-gray-100 pb-3">Inserimento Stalli</h2>
           <form onSubmit={handleAddSpot} className="space-y-4 flex-grow flex flex-col">
@@ -208,23 +264,20 @@ export default function AdminDashboard({ profile }) {
           </form>
         </div>
 
-        {/* COLONNA 3 */}
+        {/* COLONNA 3: IMPATTO SOSTENIBILE */}
         <div className="bg-emerald-900 p-6 rounded-2xl border border-emerald-800 shadow-sm flex flex-col text-white">
           <h2 className="text-lg font-bold text-emerald-50 mb-6 border-b border-emerald-700 pb-3">Impatto Sostenibile</h2>
-          
           <p className="text-sm text-emerald-200 leading-relaxed mb-8">
-            Report calcolato su <span className="font-bold text-white">{stats.totaliValide}</span> prenotazioni di rete. La riduzione dei tempi di ricerca del parcheggio contribuisce all'abbattimento delle emissioni urbane.
+            Report calcolato in tempo reale su <span className="font-bold text-white">{stats.totaliValide}</span> soste attive.
           </p>
-          
           <div className="space-y-4 mt-auto">
             <div className="bg-emerald-950 p-5 rounded-xl border border-emerald-800 shadow-inner">
-              <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-1">CO₂ Evitata Totale</p>
+              <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-1">CO₂ Evitata</p>
               <div className="flex items-baseline gap-2">
                 <span className="text-4xl font-black text-white tracking-tight">{co2Risparmiata}</span>
                 <span className="text-emerald-500 font-bold">kg</span>
               </div>
             </div>
-
             <div className="bg-emerald-950 p-5 rounded-xl border border-emerald-800 shadow-inner">
               <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-1">Assorbimento Naturale</p>
               <div className="flex items-baseline gap-2">
@@ -234,10 +287,45 @@ export default function AdminDashboard({ profile }) {
             </div>
           </div>
         </div>
-
       </div>
 
-      {/* MODALE CON ALTEZZA FISSA */}
+      {/* AGGIORNATO: SEZIONE GRAFICO CON DATI REALI E PULSANTI */}
+      <div className="bg-white p-8 rounded-3xl border border-gray-200 shadow-sm mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <h2 className="text-xl font-black text-gray-800">Analisi Performance Ambientale</h2>
+          
+          <div className="flex bg-gray-100 p-1 rounded-xl">
+            {['settimana', 'mese', 'tutto'].map(v => (
+              <button 
+                key={v} 
+                onClick={() => setChartView(v)} 
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all capitalize ${chartView === v ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        <div className="h-[300px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 'bold'}} />
+              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12}} />
+              <Tooltip 
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+              />
+              <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: '20px', fontSize: '12px', fontWeight: 'bold' }} />
+              <Line type="monotone" dataKey="co2" name="CO₂ Risparmiata (kg)" stroke="#059669" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
+              <Line type="monotone" dataKey="soste" name="Soste Totali" stroke="#2563eb" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* MODALE PRENOTAZIONI */}
       {showBookingsModal && (
         <div onClick={() => setShowBookingsModal(false)} className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] cursor-pointer">
           <div onClick={e => e.stopPropagation()} className="bg-white p-8 rounded-3xl max-w-4xl w-full shadow-2xl relative cursor-default flex flex-col max-h-[85vh]">
@@ -286,10 +374,10 @@ export default function AdminDashboard({ profile }) {
                 ))
               )}
             </div>
-            
           </div>
         </div>
       )}
+
     </div>
   );
 }

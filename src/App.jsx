@@ -6,7 +6,8 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
-import AdminDashboard from './pages/AdminDashboard'; // IMPORTIAMO L'ADMIN
+import AdminDashboard from './pages/AdminDashboard';
+import UpdatePassword from './pages/UpdatePassword';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -39,6 +40,9 @@ export default function App() {
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
         <Route path="/register" element={!session ? <Register /> : <Navigate to="/" />} />
         <Route path="/profile" element={session ? <Profile profile={profile} /> : <Navigate to="/login" />} />
+        
+        {/* 2. AGGIUNGI LA ROTTA PER IL RECUPERO PASSWORD QUI: */}
+        <Route path="/update-password" element={<UpdatePassword />} />
         
         {/* ROTTA PROTETTA: Solo se sei admin entri, altrimenti torni alla Home */}
         <Route path="/admin" element={profile?.ruolo === 'admin' ? <AdminDashboard profile={profile} /> : <Navigate to="/" />} />

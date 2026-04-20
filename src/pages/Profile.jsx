@@ -10,6 +10,8 @@ export default function Profile({ profile }) {
   const [uiMessage, setUiMessage] = useState('');
   const [activeTab, setActiveTab] = useState('attive');
 
+  const tariffaOraria = 2.00;
+
   useEffect(() => {
     if (profile) {
       setForm({
@@ -66,6 +68,36 @@ export default function Profile({ profile }) {
     showMessage("Sosta annullata.");
   };
 
+  // FUNZIONE: PROLUNGA SOSTA +1 ORA
+  const handleProlungaSosta = async (pren) => {
+    const currentEnd = new Date(pren.orariofine);
+    const newEnd = new Date(currentEnd.getTime() + 60 * 60 * 1000); // Aggiunge 1 ora
+    const nuovoCosto = (parseFloat(pren.costo || 0) + tariffaOraria).toFixed(2);
+
+    const { error } = await supabase.from('prenotazione')
+      .update({ 
+        orariofine: newEnd.toISOString(), 
+        costo: nuovoCosto 
+      })
+      .eq('idprenotazione', pren.idprenotazione);
+
+    if (error) showMessage("Errore prolungamento.");
+    else {
+      showMessage("Sosta estesa di +1h!");
+      loadPrenotazioni();
+    }
+  };
+
+  // FUNZIONE: ELIMINAZIONE ACCOUNT
+  const handleDeleteAccount = async () => {
+    const conferma = window.confirm("ATTENZIONE ZONE ROSSA: Questa operazione è irreversibile. Tutte le tue prenotazioni, le tue targhe e i tuoi dati personali verranno eliminati definitivamente. Vuoi procedere?");
+    if (!conferma) return;
+
+    await supabase.rpc('elimina_dati_utente', { p_id: profile.idpersona });
+    await supabase.auth.signOut();
+    window.location.reload();
+  };
+
   const prenoFiltrate = prenotazioni.filter(p => activeTab === 'attive' ? p.stato === 'Attiva' : p.stato !== 'Attiva');
 
   return (
@@ -80,7 +112,7 @@ export default function Profile({ profile }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* DATI PERSONALI */}
+        {/* REINSERITA LA SEZIONE DATI PERSONALI */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
           <h2 className="text-xl font-bold mb-6 text-gray-800">Dati Personali</h2>
           <form onSubmit={handleUpdate} className="space-y-4 flex-grow flex flex-col">
@@ -105,11 +137,11 @@ export default function Profile({ profile }) {
               <label className="text-sm font-bold text-emerald-900 cursor-pointer pointer-events-none">Possiedo il Pass Disabili</label>
             </div>
             
-            <button className="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded-xl font-bold shadow-sm transition-colors mt-auto">Salva Modifiche</button>
+            <button className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-xl font-bold shadow-sm transition-colors mt-auto">Salva Modifiche</button>
           </form>
         </div>
 
-        {/* VEICOLI */}
+        {/* REINSERITA LA SEZIONE VEICOLI */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
           <h2 className="text-xl font-bold mb-6 text-gray-800">I tuoi Veicoli</h2>
           <form onSubmit={addVeicolo} className="space-y-3 mb-6">
@@ -144,7 +176,7 @@ export default function Profile({ profile }) {
           </div>
         </div>
 
-        {/* STORICO PRENOTAZIONI CON ALTEZZA FISSA */}
+        {/* STORICO PRENOTAZIONI CON FUNZIONE PROLUNGA E ALTEZZA FISSA */}
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-800">Le tue Soste</h2>
@@ -155,7 +187,6 @@ export default function Profile({ profile }) {
             </div>
           </div>
           
-          {/* IL PANNELLO FISSO: 500px di altezza bloccata con scrollbar */}
           <div className="h-[500px] overflow-y-auto pr-2 custom-scrollbar">
             {prenoFiltrate.length === 0 ? (
               <div className="h-full flex items-center justify-center">
@@ -171,7 +202,6 @@ export default function Profile({ profile }) {
                         <span className="font-mono text-xs text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded mt-1 inline-block">{p.targa}</span>
                       </div>
                       
-                      {/* BADGE STATI (Verde/Blu/Grigio) */}
                       <span className={`text-[10px] uppercase px-2 py-1 rounded font-bold border ${
                         p.stato === 'Attiva' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 
                         p.stato === 'Conclusa' ? 'bg-blue-100 text-blue-800 border-blue-200' : 
@@ -197,9 +227,17 @@ export default function Profile({ profile }) {
                     </div>
                     
                     {p.stato === 'Attiva' && (
-                      <button onClick={() => executeCancelBooking(p)} className="w-full mt-5 py-2.5 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 hover:border-red-300 transition-all">
-                        Annulla Sosta
-                      </button>
+                      <div className="flex gap-2 mt-5">
+                        <button 
+                          onClick={() => handleProlungaSosta(p)} 
+                          className="flex-1 py-2.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm"
+                        >
+                          Prolunga +1h
+                        </button>
+                        <button onClick={() => executeCancelBooking(p)} className="flex-1 py-2.5 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 hover:border-red-300 transition-all">
+                          Annulla Sosta
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -207,6 +245,19 @@ export default function Profile({ profile }) {
             )}
           </div>
         </div>
+
+        {/* ZONA ROSSA: ELIMINAZIONE ACCOUNT */}
+        <div className="lg:col-span-2 bg-red-50 p-6 rounded-2xl border border-red-100 shadow-sm mt-4">
+          <h2 className="text-lg font-black text-red-900 mb-2">Zona di Pericolo</h2>
+          <p className="text-sm text-red-700 mb-4 font-medium">Questa azione eliminerà definitivamente il tuo account, le tue targhe e tutto il tuo storico dal nostro database. L'operazione non può essere annullata.</p>
+          <button 
+            onClick={handleDeleteAccount} 
+            className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold shadow-sm hover:bg-red-700 hover:shadow-md transition-all border border-red-700"
+          >
+            Elimina Definitivamente Account
+          </button>
+        </div>
+
       </div>
     </div>
   );
