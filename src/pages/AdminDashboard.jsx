@@ -17,11 +17,13 @@ export default function AdminDashboard({ profile }) {
   const [allBookingsData, setAllBookingsData] = useState([]);
   const [confirmCancelId, setConfirmCancelId] = useState(null);
 
-  // NUOVI STATI PER IL GRAFICO REALE
+  // NUOVO STATO: FILTRO PARCHEGGIO PER IL REGISTRO
+  const [filterParkingId, setFilterParkingId] = useState('all');
+
+  // STATI PER IL GRAFICO REALE
   const [chartData, setChartData] = useState([]);
   const [chartView, setChartView] = useState('settimana');
 
-  // AGGIORNATO: L'useEffect ora si riattiva anche quando cambi vista (settimana/mese/tutto)
   useEffect(() => { loadDashboardData(); }, [chartView]);
 
   const loadDashboardData = async () => {
@@ -31,7 +33,6 @@ export default function AdminDashboard({ profile }) {
     const { count: val } = await supabase.from('prenotazione').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
     const { data: p } = await supabase.from('parcheggio').select('*').order('nome');
     
-    // NUOVO: Recupero tutte le prenotazioni per popolare il grafico
     const { data: allPreno } = await supabase.from('prenotazione').select('orarioinizio, costo');
     if (allPreno) {
       setChartData(processDataForChart(allPreno, chartView));
@@ -42,7 +43,6 @@ export default function AdminDashboard({ profile }) {
     if (p && p.length > 0 && !newSpot.idparcheggio) setNewSpot(prev => ({ ...prev, idparcheggio: p[0].idparcheggio }));
   };
 
-  // NUOVA FUNZIONE: Trasforma i dati crudi di Supabase in punti per il grafico
   const processDataForChart = (data, view) => {
     const now = new Date();
     let startDate = new Date();
@@ -50,12 +50,11 @@ export default function AdminDashboard({ profile }) {
 
     if (view === 'settimana') startDate.setDate(now.getDate() - 7);
     else if (view === 'mese') startDate.setDate(now.getDate() - 30);
-    else { startDate = new Date(0); groupBy = 'month'; } // Storico completo
+    else { startDate = new Date(0); groupBy = 'month'; }
 
     const filtered = data.filter(d => new Date(d.orarioinizio) >= startDate);
     const map = {};
 
-    // Crea la linea temporale vuota (per evitare buchi nel grafico se un giorno non ha soste)
     if (view === 'settimana' || view === 'mese') {
       const daysToGenerate = view === 'settimana' ? 7 : 30;
       for (let i = daysToGenerate; i >= 0; i--) {
@@ -66,7 +65,6 @@ export default function AdminDashboard({ profile }) {
       }
     }
 
-    // Riempie la linea temporale con i dati reali
     filtered.forEach(p => {
       const date = new Date(p.orarioinizio);
       const key = groupBy === 'day' 
@@ -75,7 +73,6 @@ export default function AdminDashboard({ profile }) {
 
       if (!map[key]) map[key] = { label: key, co2: 0, soste: 0 };
       map[key].soste += 1;
-      // Il calcolo della CO2 si basa sul costo: ogni euro speso equivale a ore di sosta * fattore ambientale
       map[key].co2 += parseFloat((parseFloat(p.costo || 0) * 0.25 * 2.5).toFixed(2));
     });
 
@@ -108,6 +105,7 @@ export default function AdminDashboard({ profile }) {
         return {
            ...p,
            nomeParcheggio: parking ? parking.nome : 'Sconosciuto',
+           idparcheggio: parking ? parking.idparcheggio : null, // AGGIUNTO PER FILTRO
            pianoPosto: posto ? posto.piano : 'N/A'
         };
       });
@@ -149,9 +147,12 @@ export default function AdminDashboard({ profile }) {
 
   const co2Risparmiata = (stats.totaliValide * 0.25 * 2.5).toFixed(1);
 
-  const filteredBookings = allBookingsData.filter(p => 
-    activeTab === 'attive' ? p.stato === 'Attiva' : p.stato !== 'Attiva'
-  );
+  // AGGIORNATO: LOGICA DI FILTRAGGIO DOPPIA (TAB + PARCHEGGIO SELEZIONATO)
+  const filteredBookings = allBookingsData.filter(p => {
+    const tabMatch = activeTab === 'attive' ? p.stato === 'Attiva' : p.stato !== 'Attiva';
+    const parkingMatch = filterParkingId === 'all' || String(p.idparcheggio) === String(filterParkingId);
+    return tabMatch && parkingMatch;
+  });
 
   return (
     <div className="max-w-7xl mx-auto p-6 mt-6">
@@ -164,7 +165,6 @@ export default function AdminDashboard({ profile }) {
         {uiMessage && <div className="bg-gray-800 text-white px-5 py-2 rounded-lg font-bold shadow-md animate-pulse text-xs">{uiMessage}</div>}
       </div>
 
-      {/* RIGA STATISTICHE */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Utenti</p>
@@ -179,7 +179,6 @@ export default function AdminDashboard({ profile }) {
           <p className="text-3xl font-black text-blue-700">{stats.posti}</p>
         </div>
         
-        {/* BOTTONE SOSTE ATTIVE */}
         <div 
           onClick={handleOpenBookings}
           className="bg-emerald-50 p-6 rounded-2xl border border-emerald-200 shadow-sm hover:bg-emerald-100 hover:border-emerald-300 transition-all cursor-pointer group"
@@ -192,10 +191,7 @@ export default function AdminDashboard({ profile }) {
         </div>
       </div>
 
-      {/* RIGA FORM E IMPATTO */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        
-        {/* COLONNA 1: NUOVO IMPIANTO */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col hover:border-gray-300 transition-colors">
           <h2 className="text-lg font-bold text-emerald-900 mb-6 border-b border-gray-100 pb-3">Registra Nuovo Impianto</h2>
           <form onSubmit={handleAddParking} className="space-y-4 flex-grow flex flex-col">
@@ -234,13 +230,12 @@ export default function AdminDashboard({ profile }) {
           </form>
         </div>
 
-        {/* COLONNA 2: NUOVO STALLO */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col hover:border-gray-300 transition-colors">
           <h2 className="text-lg font-bold text-emerald-900 mb-6 border-b border-gray-100 pb-3">Inserimento Stalli</h2>
           <form onSubmit={handleAddSpot} className="space-y-4 flex-grow flex flex-col">
             <div>
               <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Impianto di Destinazione</label>
-              <select value={newSpot.idparcheggio} onChange={e => setNewSpot({...newSpot, idparcheggio: e.target.value})} className="w-full p-3 rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all">
+              <select value={newSpot.idparcheggio} onChange={(e) => setNewSpot({...newSpot, idparcheggio: e.target.value})} className="w-full p-3 rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all">
                 {listaParcheggi.map(p => <option key={p.idparcheggio} value={p.idparcheggio}>{p.nome}</option>)}
               </select>
             </div>
@@ -264,7 +259,6 @@ export default function AdminDashboard({ profile }) {
           </form>
         </div>
 
-        {/* COLONNA 3: IMPATTO SOSTENIBILE */}
         <div className="bg-emerald-900 p-6 rounded-2xl border border-emerald-800 shadow-sm flex flex-col text-white">
           <h2 className="text-lg font-bold text-emerald-50 mb-6 border-b border-emerald-700 pb-3">Impatto Sostenibile</h2>
           <p className="text-sm text-emerald-200 leading-relaxed mb-8">
@@ -289,7 +283,6 @@ export default function AdminDashboard({ profile }) {
         </div>
       </div>
 
-      {/* AGGIORNATO: SEZIONE GRAFICO CON DATI REALI E PULSANTI */}
       <div className="bg-white p-8 rounded-3xl border border-gray-200 shadow-sm mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <h2 className="text-xl font-black text-gray-800">Analisi Performance Ambientale</h2>
@@ -325,17 +318,34 @@ export default function AdminDashboard({ profile }) {
         </div>
       </div>
 
-      {/* MODALE PRENOTAZIONI */}
+      {/* MODALE REGISTRO PRENOTAZIONI CON MENU A TENDINA PARCHEGGIO */}
       {showBookingsModal && (
         <div onClick={() => setShowBookingsModal(false)} className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] cursor-pointer">
           <div onClick={e => e.stopPropagation()} className="bg-white p-8 rounded-3xl max-w-4xl w-full shadow-2xl relative cursor-default flex flex-col max-h-[85vh]">
             
-            <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-center border-b border-gray-100 pb-4 mb-6 gap-4">
               <h2 className="text-2xl font-black text-gray-900">Registro Prenotazioni</h2>
               
-              <div className="flex bg-gray-100 p-1 rounded-lg mr-8">
-                <button onClick={() => setActiveTab('attive')} className={`px-4 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'attive' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>In corso</button>
-                <button onClick={() => setActiveTab('storico')} className={`px-4 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'storico' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>Storico</button>
+              <div className="flex flex-wrap items-center gap-4">
+                {/* MENU A TENDINA: FOCUS PARCHEGGIO */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Focus:</span>
+                  <select 
+                    value={filterParkingId} 
+                    onChange={(e) => setFilterParkingId(e.target.value)}
+                    className="p-1.5 rounded-lg border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="all">Tutti i Parcheggi</option>
+                    {listaParcheggi.map(park => (
+                      <option key={park.idparcheggio} value={park.idparcheggio}>{park.nome}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex bg-gray-100 p-1 rounded-lg">
+                  <button onClick={() => setActiveTab('attive')} className={`px-4 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'attive' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>In corso</button>
+                  <button onClick={() => setActiveTab('storico')} className={`px-4 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'storico' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>Storico</button>
+                </div>
               </div>
 
               <button onClick={() => setShowBookingsModal(false)} className="text-3xl font-bold text-gray-300 hover:text-gray-600 transition-colors">&times;</button>
@@ -344,7 +354,7 @@ export default function AdminDashboard({ profile }) {
             <div className="h-[500px] overflow-y-auto space-y-3 pr-2 custom-scrollbar">
               {filteredBookings.length === 0 ? (
                 <div className="h-full flex items-center justify-center">
-                  <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Nessun dato trovato</p>
+                  <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Nessuna sosta trovata per questo filtro</p>
                 </div>
               ) : (
                 filteredBookings.map(pren => (
