@@ -38,7 +38,6 @@ function LocationControl({ setUserLoc }) {
       setIsLocating(false);
     });
     map.once('locationerror', () => {
-      alert("Impossibile accedere alla posizione.");
       setIsLocating(false);
     });
   };

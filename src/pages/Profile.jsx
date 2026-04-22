@@ -2,7 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../api/supabaseClient';
 
 export default function Profile({ profile }) {
-  const [form, setForm] = useState({ nome: '', cognome: '', is_disabile: false });
+  const [form, setForm] = useState({ 
+    nome: '', 
+    cognome: '', 
+    is_disabile: false,
+    telefono: '',
+    citta: '',
+    via: '',
+    cap: ''
+  });
   const [targa, setTarga] = useState('');
   const [alimentazione, setAlimentazione] = useState('Termica');
   const [veicoli, setVeicoli] = useState([]);
@@ -17,7 +25,11 @@ export default function Profile({ profile }) {
       setForm({
         nome: profile.nome || '',
         cognome: profile.cognome || '',
-        is_disabile: profile.is_disabile || false
+        is_disabile: profile.is_disabile || false,
+        telefono: profile.telefono || '',
+        citta: profile.citta || '',
+        via: profile.via || '',
+        cap: profile.cap || ''
       });
       loadVeicoli();
       loadPrenotazioni();
@@ -68,17 +80,13 @@ export default function Profile({ profile }) {
     showMessage("Sosta annullata.");
   };
 
-  // FUNZIONE: PROLUNGA SOSTA +1 ORA
   const handleProlungaSosta = async (pren) => {
     const currentEnd = new Date(pren.orariofine);
-    const newEnd = new Date(currentEnd.getTime() + 60 * 60 * 1000); // Aggiunge 1 ora
+    const newEnd = new Date(currentEnd.getTime() + 60 * 60 * 1000);
     const nuovoCosto = (parseFloat(pren.costo || 0) + tariffaOraria).toFixed(2);
 
     const { error } = await supabase.from('prenotazione')
-      .update({ 
-        orariofine: newEnd.toISOString(), 
-        costo: nuovoCosto 
-      })
+      .update({ orariofine: newEnd.toISOString(), costo: nuovoCosto })
       .eq('idprenotazione', pren.idprenotazione);
 
     if (error) showMessage("Errore prolungamento.");
@@ -88,7 +96,6 @@ export default function Profile({ profile }) {
     }
   };
 
-  // FUNZIONE: ELIMINAZIONE ACCOUNT
   const handleDeleteAccount = async () => {
     const conferma = window.confirm("ATTENZIONE ZONE ROSSA: Questa operazione è irreversibile. Tutte le tue prenotazioni, le tue targhe e i tuoi dati personali verranno eliminati definitivamente. Vuoi procedere?");
     if (!conferma) return;
@@ -101,7 +108,7 @@ export default function Profile({ profile }) {
   const prenoFiltrate = prenotazioni.filter(p => activeTab === 'attive' ? p.stato === 'Attiva' : p.stato !== 'Attiva');
 
   return (
-    <div className="max-w-5xl mx-auto p-6 mt-10 relative z-0">
+    <div className="max-w-7xl mx-auto p-6 mt-10 relative z-0">
       <div className="flex justify-between items-center mb-8 h-10 border-b border-gray-200 pb-4">
         <div>
           <h1 className="text-3xl font-black text-emerald-900">Area Personale</h1>
@@ -112,7 +119,7 @@ export default function Profile({ profile }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* REINSERITA LA SEZIONE DATI PERSONALI */}
+        {/* SEZIONE DATI PERSONALI AGGIORNATA */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
           <h2 className="text-xl font-bold mb-6 text-gray-800">Dati Personali</h2>
           <form onSubmit={handleUpdate} className="space-y-4 flex-grow flex flex-col">
@@ -127,13 +134,30 @@ export default function Profile({ profile }) {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Telefono</label>
+                <input type="text" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Cellulare" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Città</label>
+                <input type="text" value={form.citta} onChange={e => setForm({...form, citta: e.target.value})} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Città" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-2">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Via</label>
+                <input type="text" value={form.via} onChange={e => setForm({...form, via: e.target.value})} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Indirizzo" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cap</label>
+                <input type="text" value={form.cap} onChange={e => setForm({...form, cap: e.target.value})} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Cap" />
+              </div>
+            </div>
+
             <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100 hover:bg-emerald-100/50 transition-colors cursor-pointer" onClick={() => setForm({...form, is_disabile: !form.is_disabile})}>
-              <input 
-                type="checkbox" 
-                checked={form.is_disabile} 
-                onChange={e => setForm({...form, is_disabile: e.target.checked})}
-                className="w-5 h-5 accent-emerald-600 cursor-pointer pointer-events-none"
-              />
+              <input type="checkbox" checked={form.is_disabile} onChange={e => setForm({...form, is_disabile: e.target.checked})} className="w-5 h-5 accent-emerald-600 cursor-pointer pointer-events-none" />
               <label className="text-sm font-bold text-emerald-900 cursor-pointer pointer-events-none">Possiedo il Pass Disabili</label>
             </div>
             
@@ -141,7 +165,7 @@ export default function Profile({ profile }) {
           </form>
         </div>
 
-        {/* REINSERITA LA SEZIONE VEICOLI */}
+        {/* SEZIONE VEICOLI */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
           <h2 className="text-xl font-bold mb-6 text-gray-800">I tuoi Veicoli</h2>
           <form onSubmit={addVeicolo} className="space-y-3 mb-6">
@@ -163,7 +187,7 @@ export default function Profile({ profile }) {
             </div>
           </form>
           
-          <div className="space-y-2 overflow-y-auto max-h-[150px] custom-scrollbar pr-1">
+          <div className="space-y-2 overflow-y-auto max-h-[250px] custom-scrollbar pr-1">
             {veicoli.length === 0 && <p className="text-gray-400 text-sm font-medium text-center py-4">Nessun veicolo salvato.</p>}
             {veicoli.map(v => (
               <div key={v.targa} className="p-3 bg-gray-50 border border-gray-100 rounded-xl flex justify-between items-center font-bold transition-colors">
@@ -176,11 +200,10 @@ export default function Profile({ profile }) {
           </div>
         </div>
 
-        {/* STORICO PRENOTAZIONI CON FUNZIONE PROLUNGA E ALTEZZA FISSA */}
+        {/* STORICO PRENOTAZIONI */}
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-800">Le tue Soste</h2>
-            
             <div className="flex bg-gray-100 p-1 rounded-lg">
               <button onClick={() => setActiveTab('attive')} className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'attive' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>In corso</button>
               <button onClick={() => setActiveTab('storico')} className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'storico' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Storico</button>
@@ -201,7 +224,6 @@ export default function Profile({ profile }) {
                         <span className="font-black text-gray-800 text-lg block">Stallo #{p.idposto}</span>
                         <span className="font-mono text-xs text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded mt-1 inline-block">{p.targa}</span>
                       </div>
-                      
                       <span className={`text-[10px] uppercase px-2 py-1 rounded font-bold border ${
                         p.stato === 'Attiva' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 
                         p.stato === 'Conclusa' ? 'bg-blue-100 text-blue-800 border-blue-200' : 
@@ -210,33 +232,15 @@ export default function Profile({ profile }) {
                         {p.stato}
                       </span>
                     </div>
-
                     <div className="text-xs text-gray-600 space-y-1.5 flex-grow">
-                      <div className="flex justify-between">
-                        <span>Arrivo:</span>
-                        <span className="text-gray-900 font-bold">{formattaData(p.orarioinizio)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Uscita:</span>
-                        <span className="text-gray-900 font-bold">{formattaData(p.orariofine)}</span>
-                      </div>
-                      <div className="flex justify-between pt-2 border-t border-gray-100 mt-2">
-                        <span>Costo:</span>
-                        <span className="text-emerald-700 font-black">{p.costo ? `${p.costo} €` : '0.00 €'}</span>
-                      </div>
+                      <div className="flex justify-between"><span>Arrivo:</span><span className="text-gray-900 font-bold">{formattaData(p.orarioinizio)}</span></div>
+                      <div className="flex justify-between"><span>Uscita:</span><span className="text-gray-900 font-bold">{formattaData(p.orariofine)}</span></div>
+                      <div className="flex justify-between pt-2 border-t border-gray-100 mt-2"><span>Costo:</span><span className="text-emerald-700 font-black">{p.costo ? `${p.costo} €` : '0.00 €'}</span></div>
                     </div>
-                    
                     {p.stato === 'Attiva' && (
                       <div className="flex gap-2 mt-5">
-                        <button 
-                          onClick={() => handleProlungaSosta(p)} 
-                          className="flex-1 py-2.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm"
-                        >
-                          Prolunga +1h
-                        </button>
-                        <button onClick={() => executeCancelBooking(p)} className="flex-1 py-2.5 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 hover:border-red-300 transition-all">
-                          Annulla Sosta
-                        </button>
+                        <button onClick={() => handleProlungaSosta(p)} className="flex-1 py-2.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm">Prolunga +1h</button>
+                        <button onClick={() => executeCancelBooking(p)} className="flex-1 py-2.5 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 hover:border-red-300 transition-all">Annulla Sosta</button>
                       </div>
                     )}
                   </div>
@@ -246,16 +250,11 @@ export default function Profile({ profile }) {
           </div>
         </div>
 
-        {/* ZONA ROSSA: ELIMINAZIONE ACCOUNT */}
+        {/* ZONA ROSSA */}
         <div className="lg:col-span-2 bg-red-50 p-6 rounded-2xl border border-red-100 shadow-sm mt-4">
           <h2 className="text-lg font-black text-red-900 mb-2">Zona di Pericolo</h2>
           <p className="text-sm text-red-700 mb-4 font-medium">Questa azione eliminerà definitivamente il tuo account, le tue targhe e tutto il tuo storico dal nostro database. L'operazione non può essere annullata.</p>
-          <button 
-            onClick={handleDeleteAccount} 
-            className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold shadow-sm hover:bg-red-700 hover:shadow-md transition-all border border-red-700"
-          >
-            Elimina Definitivamente Account
-          </button>
+          <button onClick={handleDeleteAccount} className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold shadow-sm hover:bg-red-700 transition-all border border-red-700">Elimina Definitivamente Account</button>
         </div>
 
       </div>
