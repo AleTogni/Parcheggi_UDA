@@ -50,9 +50,23 @@ export default function App() {
     return () => { supabase.removeChannel(channel); };
   }, [profile?.idpersona]);
 
-  async function fetchProfile(uuid) {
-    const { data } = await supabase.from('persona').select('*').eq('supabase_uuid', uuid).maybeSingle();
-    setProfile(data);
+  async function fetchProfile(uuid, retries = 4) {
+    const { data } = await supabase
+      .from('persona')
+      .select('*')
+      .eq('supabase_uuid', uuid)
+      .maybeSingle();
+
+    if (data) {
+      // Se trova i dati, li imposta
+      setProfile(data);
+    } else if (retries > 0) {
+      // Se NON trova i dati (es. appena registrato), aspetta 500ms e riprova!
+      setTimeout(() => fetchProfile(uuid, retries - 1), 500);
+    } else {
+      // Se dopo 4 tentativi (2 secondi) non c'è ancora nulla, si arrende
+      setProfile(null);
+    }
   }
 
   return (
