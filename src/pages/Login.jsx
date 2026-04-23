@@ -80,7 +80,12 @@ export default function Login() {
             Hai dimenticato la password?
           </button>
         </div>
-        
+
+        <p className="mb-4 text-xs text-gray-500 leading-relaxed">
+          Questo è un progetto scolastico: non garantiamo la sicurezza completa dei dati. Pur essendo accessibile via HTTPS, l'app non è realizzata come servizio professionale e non dovrebbe gestire credenziali o informazioni sensibili.
+          Ai sensi dell’art. 32 GDPR e dell’art. 2-ter del D.Lgs. 196/2003, la tutela dei dati personali si applica, ma qui il sistema è implementato esclusivamente per finalità didattiche.
+        </p>
+
         <button type="submit" className="w-full bg-emerald-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-emerald-700 shadow-md transition">Accedi</button>
         
         <p className="mt-6 text-center text-sm text-gray-600">

@@ -7,28 +7,66 @@ export default function Home({ profile }) {
   const [userVehicles, setUserVehicles] = useState([]);
   const [modalData, setModalData] = useState(null);
   const [bookingSpot, setBookingSpot] = useState(null);
-  
-  // STATI PER FILTRI E POSIZIONE
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterOnlyDisabled, setFilterOnlyDisabled] = useState(false);
-  const [filterOnlyEV, setFilterOnlyEV] = useState(false);
-  const [sortBy, setSortBy] = useState('liberi'); 
-  const [userLoc, setUserLoc] = useState(null); 
-
+  const [userLoc, setUserLoc] = useState(null);
   const [hoveredParkingId, setHoveredParkingId] = useState(null);
   const [cityStats, setCityStats] = useState({ freeSpots: 0, evSpots: 0, activeSoste: 0 });
 
-  // STATI PER IL PROCESSO DI PRENOTAZIONE
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterOnlyDisabled, setFilterOnlyDisabled] = useState(false);
+  const [filterOnlyEV, setFilterOnlyEV] = useState(false);
+  const [sortBy, setSortBy] = useState('liberi');
+
   const [selectedTarga, setSelectedTarga] = useState('manuale');
   const [nuovaTarga, setNuovaTarga] = useState('');
   const [bookingStart, setBookingStart] = useState('');
   const [bookingEnd, setBookingEnd] = useState('');
 
-  // GESTIONE NOTIFICHE
   const [uiMessage, setUiMessage] = useState({ text: '', type: '' });
   const [showGpsError, setShowGpsError] = useState(false);
 
-  const tariffaOraria = 2.00; 
+  // Stato per il popup dell'assistente virtuale
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [userInput, setUserInput] = useState('');
+  const [assistantIndex, setAssistantIndex] = useState(0);
+
+  // Messaggi preimpostati per l'assistente (esempio per il progetto)
+  const assistantMessages = [
+    "Ciao! Sono l'assistente virtuale di Brescia Green Park. Come posso aiutarti?",
+    "Puoi prenotare un posto auto direttamente dalla mappa o dalla lista dei parcheggi.",
+    "Ricorda che i posti per disabili sono contrassegnati con l'icona H.",
+    "Le colonnine elettriche sono disponibili nei parcheggi selezionati.",
+    "Per qualsiasi domanda, consulta la sezione profilo o contatta il supporto.",
+    "Abbiamo finito i token per generare risposte AI e perciò dobbiamo contattare l'assistenza."
+  ];
+
+  const assistantPhoto = '/shared image.jpg';
+
+  const handleSendMessage = () => {
+    if (!userInput.trim()) return;
+
+    setChatMessages(prev => [...prev, { sender: 'user', text: userInput }]);
+
+    const responseText = assistantMessages[assistantIndex] ||
+      "Abbiamo finito i token per generare risposte AI e perciò dobbiamo contattare l'assistenza.";
+
+    setTimeout(() => {
+      setChatMessages(prev => [...prev, { sender: 'assistant', text: responseText }]);
+    }, 500);
+
+    setUserInput('');
+    setAssistantIndex(prev => Math.min(prev + 1, assistantMessages.length));
+  };
+
+  // Scroll automatico alla fine dei messaggi
+  useEffect(() => {
+    const chatContainer = document.querySelector('.chat-messages');
+    if (chatContainer) {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  const tariffaOraria = 2.00;
   const nowStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
   const IconH = ({ className }) => (
@@ -38,7 +76,7 @@ export default function Home({ profile }) {
     </svg>
   );
 
-  useEffect(() => { 
+  useEffect(() => {
     loadData();
     if (profile) loadUserVehicles();
 
@@ -66,15 +104,16 @@ export default function Home({ profile }) {
       const occupati = posti.filter(item => item.stato?.toLowerCase() === 'occupato').length;
       const liberi = (p.postitot || 0) - occupati;
       const ratio = occupati / (p.postitot || 1);
+      
       const freeEV = posti.filter(item => item.tipoposto === 'Elettrico' && item.stato?.toLowerCase() === 'libero').length;
       
       totalFree += liberi;
       totalEVFree += freeEV;
 
-      let color = "border-emerald-500 bg-emerald-50 text-emerald-900"; 
-      if (ratio >= 1) color = "border-red-500 bg-red-50 text-red-900"; 
-      else if (ratio >= 0.5) color = "border-blue-500 bg-blue-50 text-blue-900"; 
-      
+      let color = "border-emerald-500 bg-emerald-50 text-emerald-900";
+      if (occupati / (p.postitot || 1) >= 1) color = "border-red-500 bg-red-50 text-red-900";
+      else if (occupati / (p.postitot || 1) >= 0.5) color = "border-blue-500 bg-blue-50 text-blue-900";
+
       return { ...p, occupati, liberi, color, postiList: posti };
     });
 
@@ -104,8 +143,9 @@ export default function Home({ profile }) {
     }
   };
 
+  // FIX 1: FORMULA PER DISTANZA ESATTA (Haversine) INVECE DI Math.hypot
   const getDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Raggio terra in km
+    const R = 6371; // Raggio della terra in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = 
@@ -124,6 +164,7 @@ export default function Home({ profile }) {
     if (sortBy === 'liberi') return b.liberi - a.liberi;
     if (sortBy === 'nome') return a.nome?.localeCompare(b.nome);
     if (sortBy === 'vicini' && userLoc) {
+      // Usa getDistance e parseFloat per calcoli geografici corretti
       const distA = getDistance(userLoc.lat, userLoc.lng, parseFloat(a.latitudine), parseFloat(a.longitudine));
       const distB = getDistance(userLoc.lat, userLoc.lng, parseFloat(b.latitudine), parseFloat(b.longitudine));
       return distA - distB;
@@ -139,50 +180,41 @@ export default function Home({ profile }) {
     const now = new Date();
 
     if (!bookingStart || !bookingEnd) return showInternalMessage("Inserisci orario di arrivo e uscita.");
-    if (start < new Date(now.getTime() - 5 * 60000)) return showInternalMessage("L'orario di inizio è nel passato.");
+    if (start < new Date(now.getTime() - 5 * 60000)) return showInternalMessage("L'orario di inizio non può essere nel passato.");
     if (end <= start) return showInternalMessage("L'uscita deve essere successiva all'arrivo.");
 
     let targaFinale = selectedTarga === 'manuale' ? nuovaTarga.toUpperCase() : selectedTarga;
     if (selectedTarga === 'manuale' && nuovaTarga.length < 5) return showInternalMessage("Inserisci una targa valida.");
 
-    // --- NUOVI CONTROLLI REQUISITI POSTO ---
+    // FIX 2: CONTROLLO REQUISITI POSTO (REINSERITO)
     if (bookingSpot.tipoposto === 'Disabili' && !profile.is_disabile) {
       return showInternalMessage("Questo posto è riservato a utenti con pass disabili registrato nel profilo.");
     }
-
+    
     const veicoloScelto = userVehicles.find(v => v.targa === selectedTarga);
     const alimentazioneVeicolo = selectedTarga === 'manuale' ? 'Termica' : (veicoloScelto?.alimentazione || 'Termica');
-    
     if (bookingSpot.tipoposto === 'Elettrico' && alimentazioneVeicolo !== 'Elettrica') {
       return showInternalMessage("Questo stallo è riservato esclusivamente a veicoli elettrici.");
     }
-    // --------------------------------------------------------
+    // ---------------------------------------------
 
+    // Se si usa una targa manuale, salvala nel DB in background
     if (selectedTarga === 'manuale') {
-      const { error: errV } = await supabase
-        .from('veicolo')
-        .upsert([{ 
-          idpersona: profile.idpersona, 
-          targa: targaFinale, 
-          alimentazione: 'Termica' 
-        }], { onConflict: 'targa' });
-        
-      if (errV) return showInternalMessage("Errore registrazione veicolo: " + errV.message);
+      await supabase.from('veicolo').upsert([{ 
+        idpersona: profile.idpersona, 
+        targa: targaFinale, 
+        alimentazione: 'Termica' 
+      }], { onConflict: 'targa' });
     }
 
     const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     const { error: errPren } = await supabase.from('prenotazione').insert([{
-      idpersona: profile.idpersona, 
-      targa: targaFinale, 
-      idposto: bookingSpot.idposto,
-      codiceaccesso: accessCode, 
-      orarioinizio: bookingStart, 
-      orariofine: bookingEnd,
-      stato: 'Attiva', 
-      costo: preventivo
+      idpersona: profile.idpersona, targa: targaFinale, idposto: bookingSpot.idposto,
+      codiceaccesso: accessCode, orarioinizio: bookingStart, orariofine: bookingEnd,
+      stato: 'Attiva', costo: preventivo
     }]);
 
-    if (errPren) return showInternalMessage("Errore database: " + errPren.message);
+    if (errPren) return showInternalMessage("Errore: " + errPren.message);
 
     await supabase.from('posto_auto').update({ stato: 'Occupato' }).eq('idposto', bookingSpot.idposto);
     
@@ -227,7 +259,6 @@ export default function Home({ profile }) {
         </div>
       )}
 
-      {/* SEZIONE RICERCA E FILTRI */}
       <div className="mb-8">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-6 gap-6">
           <div>
@@ -252,13 +283,13 @@ export default function Home({ profile }) {
             <div className="flex gap-2 w-full sm:w-auto">
               <button 
                 onClick={() => setFilterOnlyDisabled(!filterOnlyDisabled)} 
-                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-black border transition-all uppercase flex items-center justify-center gap-1 ${filterOnlyDisabled ? 'bg-yellow-500 text-white border-yellow-500 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-black border transition-all uppercase tracking-tighter flex items-center justify-center gap-1 ${filterOnlyDisabled ? 'bg-yellow-500 text-white border-yellow-500 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
               >
                 <IconH className="w-4 h-4" /> Disabili
               </button>
               <button 
                 onClick={() => setFilterOnlyEV(!filterOnlyEV)} 
-                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-black border transition-all uppercase flex items-center justify-center gap-1 ${filterOnlyEV ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-black border transition-all uppercase tracking-tighter flex items-center justify-center gap-1 ${filterOnlyEV ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> EV
               </button>
@@ -282,10 +313,9 @@ export default function Home({ profile }) {
         </div>
       </div>
       
-      {/* SEZIONE MAPPA E ELENCO */}
       <div className="flex flex-col lg:flex-row gap-6 lg:h-[600px]">
         
-        <div className="w-full h-[350px] lg:h-full lg:w-2/3">
+        <div className="w-full lg:w-2/3 h-full">
           <ParkingMap 
             parkings={filteredParkings} 
             onMarkerClick={(id) => setModalData(parkings.find(p => p.idparcheggio === id))} 
@@ -309,42 +339,49 @@ export default function Home({ profile }) {
           <div className="overflow-y-auto px-2 py-2 -mx-2 flex flex-col gap-4 custom-scrollbar flex-1">
             {filteredParkings.map(p => {
               const isHovered = hoveredParkingId === p.idparcheggio;
+              const hoverStyles = isHovered 
+                ? 'ring-4 ring-emerald-400 scale-[1.02] shadow-xl z-10 transition-all duration-300' 
+                : 'hover:shadow-md transition-all duration-300';
+
               return (
                 <div 
                   key={p.idparcheggio} 
                   onClick={() => setModalData(p)} 
                   onMouseEnter={() => setHoveredParkingId(p.idparcheggio)}
                   onMouseLeave={() => setHoveredParkingId(null)}
-                  className={`shrink-0 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${isHovered ? 'ring-4 ring-emerald-400 scale-[1.02] shadow-xl z-10' : 'hover:shadow-md'} ${p.color}`}
+                  className={`shrink-0 p-4 rounded-2xl border-2 cursor-pointer relative overflow-hidden group ${p.color} ${hoverStyles}`}
                 >
-                  <div className="flex justify-between items-center">
+                  <div className="relative z-10 flex justify-between items-center">
                     <div>
-                      <h3 className="font-black text-lg group-hover:text-emerald-700 transition-colors">{p.nome}</h3>
+                      <h3 className="font-black text-lg mb-1 group-hover:text-emerald-700 transition-colors">{p.nome}</h3>
                       <p className="text-2xl font-black">
                         {p.liberi} <span className="text-[10px] font-bold opacity-60 uppercase tracking-widest">/ {p.postitot} liberi</span>
                       </p>
                     </div>
                     <div className="flex flex-col gap-1 items-end">
-                       {p.postiList.some(s => s.tipoposto === 'Elettrico') && <span className="bg-blue-600 text-white text-[9px] px-2 py-1 rounded font-black flex items-center gap-1 shadow-sm"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> EV</span>}
-                       {p.postiList.some(s => s.tipoposto === 'Disabili') && <span className="bg-yellow-500 text-white text-[9px] px-2 py-1 rounded font-black flex items-center gap-1 shadow-sm"><IconH className="w-3 h-3" /> H</span>}
+                       {p.postiList.some(s => s.tipoposto === 'Elettrico') && <span className="bg-blue-600 text-white text-[9px] px-2 py-1 rounded font-black shadow-sm flex items-center gap-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> EV</span>}
+                       {p.postiList.some(s => s.tipoposto === 'Disabili') && <span className="bg-yellow-500 text-white text-[9px] px-2 py-1 rounded font-black shadow-sm flex items-center gap-1"><IconH className="w-3 h-3" /> H</span>}
                     </div>
                   </div>
                 </div>
               );
             })}
+            {filteredParkings.length === 0 && (
+              <div className="text-center py-12 bg-gray-50 rounded-3xl border border-dashed border-gray-300">
+                 <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Nessun risultato trovato</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* MODALE DI PRENOTAZIONE */}
       {modalData && (
         <div onClick={closeModal} className="fixed inset-0 bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[100] transition-all overflow-y-auto">
           <div onClick={(e) => e.stopPropagation()} className="bg-white p-8 rounded-[2.5rem] max-w-2xl w-full shadow-2xl relative animate-scale-up my-auto">
             <button onClick={closeModal} className="absolute top-6 right-6 text-3xl font-bold text-gray-300 hover:text-gray-800 transition-colors">&times;</button>
-            <h2 className="text-4xl font-black text-gray-900 mb-2">{modalData.nome}</h2>
+            <h2 className="text-4xl font-black text-gray-900 mb-2 uppercase tracking-tighter">{modalData.nome}</h2>
             <p className="text-gray-400 font-bold mb-6 uppercase text-xs tracking-[0.2em] border-b pb-4">Gestione sosta</p>
             
-            {/* NOTIFICA INTERNA ALLA MODALE */}
             {uiMessage.text && (
               <div className={`p-4 mb-6 rounded-2xl text-center font-black text-[10px] uppercase tracking-widest border animate-pulse ${
                 uiMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
@@ -383,11 +420,7 @@ export default function Home({ profile }) {
                   <div>
                     <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest">Il tuo veicolo</label>
                     <select value={selectedTarga} onChange={(e) => setSelectedTarga(e.target.value)} className="w-full p-4 rounded-2xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-emerald-500 font-black text-gray-800 outline-none transition-all shadow-sm">
-                      {userVehicles.map(v => (
-                        <option key={v.targa} value={v.targa}>
-                          {v.targa}{v.alimentazione ? ` (${v.alimentazione})` : ''}
-                        </option>
-                      ))}
+                      {userVehicles.map(v => <option key={v.targa} value={v.targa}>{v.targa}{v.alimentazione ? ` (${v.alimentazione})` : ''}</option>)}
                       <option value="manuale">Inserisci targa manualmente...</option>
                     </select>
                   </div>
@@ -421,6 +454,60 @@ export default function Home({ profile }) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Popup Assistente Virtuale */}
+      <div className="fixed bottom-6 right-6 z-[200]">
+        <button 
+          onClick={() => setIsChatOpen(true)} 
+          className="w-16 h-16 bg-emerald-600 hover:bg-emerald-700 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110"
+        >
+          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        </button>
+      </div>
+
+      {isChatOpen && (
+        <div onClick={() => setIsChatOpen(false)} className="fixed inset-0 bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[300] transition-all">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white p-6 rounded-2xl max-w-md w-full shadow-2xl relative animate-scale-up flex flex-col h-[80vh] max-h-[600px]">
+            <button onClick={() => setIsChatOpen(false)} className="absolute top-4 right-4 text-2xl font-bold text-gray-300 hover:text-gray-800 transition-colors">&times;</button>
+            <div className="flex items-center gap-4 mb-4">
+              <img src={assistantPhoto} alt="Assistente Virtuale" className="w-14 h-14 rounded-full object-cover border-2 border-emerald-600 shadow-sm" />
+              <div>
+                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tighter">Assistente Virtuale</h3>
+                <p className="text-sm text-gray-500">Ogni risposta arriva dopo il tuo input.</p>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3 mb-4 chat-messages">
+              {chatMessages.map((msg, index) => (
+                <div key={index} className={`p-3 rounded-xl max-w-[80%] ${msg.sender === 'user' ? 'bg-emerald-600 text-white self-end ml-auto' : 'bg-gray-100 text-gray-800'}`}>
+                  <p className="text-sm">{msg.text}</p>
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={userInput} 
+                onChange={(e) => setUserInput(e.target.value)} 
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                placeholder="Scrivi un messaggio..." 
+                className="flex-1 p-3 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all" 
+              />
+              <button 
+                onClick={handleSendMessage} 
+                className="bg-emerald-600 text-white px-4 py-3 rounded-xl hover:bg-emerald-700 transition-all"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       )}
