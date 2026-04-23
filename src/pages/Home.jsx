@@ -24,7 +24,7 @@ export default function Home({ profile }) {
   const [bookingStart, setBookingStart] = useState('');
   const [bookingEnd, setBookingEnd] = useState('');
 
-  // GESTIONE NOTIFICHE (Esterna per GPS, Interna per Dati/Successo)
+  // GESTIONE NOTIFICHE
   const [uiMessage, setUiMessage] = useState({ text: '', type: '' });
   const [showGpsError, setShowGpsError] = useState(false);
 
@@ -42,7 +42,6 @@ export default function Home({ profile }) {
     loadData();
     if (profile) loadUserVehicles();
 
-    // SOTTOSCRIZIONE REALTIME
     const channel = supabase
       .channel('db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posto_auto' }, () => loadData())
@@ -67,8 +66,8 @@ export default function Home({ profile }) {
       const occupati = posti.filter(item => item.stato?.toLowerCase() === 'occupato').length;
       const liberi = (p.postitot || 0) - occupati;
       const ratio = occupati / (p.postitot || 1);
-      
       const freeEV = posti.filter(item => item.tipoposto === 'Elettrico' && item.stato?.toLowerCase() === 'libero').length;
+      
       totalFree += liberi;
       totalEVFree += freeEV;
 
@@ -105,6 +104,17 @@ export default function Home({ profile }) {
     }
   };
 
+  const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Raggio terra in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
   const filteredParkings = (parkings || []).filter(p => {
     const matchSearch = p.nome?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchDisabled = filterOnlyDisabled ? p.postiList?.some(posto => posto.tipoposto === 'Disabili') : true;
@@ -114,14 +124,13 @@ export default function Home({ profile }) {
     if (sortBy === 'liberi') return b.liberi - a.liberi;
     if (sortBy === 'nome') return a.nome?.localeCompare(b.nome);
     if (sortBy === 'vicini' && userLoc) {
-      const distA = Math.hypot(a.latitudine - userLoc.lat, a.longitudine - userLoc.lng);
-      const distB = Math.hypot(b.latitudine - userLoc.lat, b.longitudine - userLoc.lng);
+      const distA = getDistance(userLoc.lat, userLoc.lng, parseFloat(a.latitudine), parseFloat(a.longitudine));
+      const distB = getDistance(userLoc.lat, userLoc.lng, parseFloat(b.latitudine), parseFloat(b.longitudine));
       return distA - distB;
     }
     return 0;
   });
 
-  // FUNZIONE AGGIORNATA PER RISOLVERE L'ERRORE FOREIGN KEY
   const handleConfirmBooking = async () => {
     if (!bookingSpot) return;
 
@@ -136,7 +145,19 @@ export default function Home({ profile }) {
     let targaFinale = selectedTarga === 'manuale' ? nuovaTarga.toUpperCase() : selectedTarga;
     if (selectedTarga === 'manuale' && nuovaTarga.length < 5) return showInternalMessage("Inserisci una targa valida.");
 
-    // REGISTRAZIONE AUTOMATICA VEICOLO PER RISOLVERE CONSTRAINT
+    // --- NUOVI CONTROLLI REQUISITI POSTO ---
+    if (bookingSpot.tipoposto === 'Disabili' && !profile.is_disabile) {
+      return showInternalMessage("Questo posto è riservato a utenti con pass disabili registrato nel profilo.");
+    }
+
+    const veicoloScelto = userVehicles.find(v => v.targa === selectedTarga);
+    const alimentazioneVeicolo = selectedTarga === 'manuale' ? 'Termica' : (veicoloScelto?.alimentazione || 'Termica');
+    
+    if (bookingSpot.tipoposto === 'Elettrico' && alimentazioneVeicolo !== 'Elettrica') {
+      return showInternalMessage("Questo stallo è riservato esclusivamente a veicoli elettrici.");
+    }
+    // --------------------------------------------------------
+
     if (selectedTarga === 'manuale') {
       const { error: errV } = await supabase
         .from('veicolo')
@@ -200,7 +221,6 @@ export default function Home({ profile }) {
   return (
     <div className="max-w-7xl mx-auto p-6 relative z-0">
       
-      {/* NOTIFICA GPS ESTERNA */}
       {showGpsError && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-2 rounded-full shadow-2xl font-black text-[10px] uppercase tracking-widest z-[500] animate-in fade-in zoom-in duration-300">
           Attiva il GPS sulla mappa per usare questo filtro
@@ -246,7 +266,6 @@ export default function Home({ profile }) {
           </div>
         </div>
 
-        {/* STATS RAPIDE */}
         <div className="grid grid-cols-3 gap-4 border-t border-gray-200 pt-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 shadow-sm"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg></div>
@@ -265,7 +284,8 @@ export default function Home({ profile }) {
       
       {/* SEZIONE MAPPA E ELENCO */}
       <div className="flex flex-col lg:flex-row gap-6 lg:h-[600px]">
-        <div className="w-full lg:w-2/3 h-full">
+        
+        <div className="w-full h-[350px] lg:h-full lg:w-2/3">
           <ParkingMap 
             parkings={filteredParkings} 
             onMarkerClick={(id) => setModalData(parkings.find(p => p.idparcheggio === id))} 
@@ -363,7 +383,6 @@ export default function Home({ profile }) {
                   <div>
                     <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest">Il tuo veicolo</label>
                     <select value={selectedTarga} onChange={(e) => setSelectedTarga(e.target.value)} className="w-full p-4 rounded-2xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-emerald-500 font-black text-gray-800 outline-none transition-all shadow-sm">
-                      {/* Correzione parentesi alimentazione */}
                       {userVehicles.map(v => (
                         <option key={v.targa} value={v.targa}>
                           {v.targa}{v.alimentazione ? ` (${v.alimentazione})` : ''}
@@ -397,8 +416,8 @@ export default function Home({ profile }) {
                   )}
                 </div>
                 <div className="flex gap-3 mt-8">
-                  <button onClick={handleConfirmBooking} className="flex-1 bg-emerald-600 text-white py-4 rounded-[1.5rem] font-black text-lg hover:bg-emerald-700 transition-all shadow-md active:scale-95">Paga e conferma</button>
-                  <button onClick={() => setBookingSpot(null)} className="px-10 bg-gray-100 text-gray-500 rounded-[1.5rem] font-black hover:bg-gray-200 transition-all text-xs tracking-widest">Indietro</button>
+                  <button onClick={handleConfirmBooking} className="flex-1 bg-emerald-600 text-white py-4 rounded-[1.5rem] font-black text-lg hover:bg-emerald-700 transition-all shadow-md active:scale-95 uppercase tracking-wide">Paga e conferma</button>
+                  <button onClick={() => setBookingSpot(null)} className="px-10 bg-gray-100 text-gray-500 rounded-[1.5rem] font-black hover:bg-gray-200 transition-all uppercase text-xs tracking-widest">Indietro</button>
                 </div>
               </div>
             )}

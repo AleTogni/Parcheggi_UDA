@@ -1,7 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Polygon, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+
+// COMPONENTE PER RISOLVERE IL CARICAMENTO A METÀ
+function MapResizer({ trigger }) {
+  const map = useMap();
+  useEffect(() => {
+    // Forza il ricalcolo delle dimensioni dopo un breve delay per permettere al layout CSS di stabilizzarsi
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [map, trigger]); // Si attiva al montaggio e se i parcheggi cambiano
+  return null;
+}
 
 // Configurazione Marker Personalizzati
 const createCustomIcon = (colorClass, isHovered) => {
@@ -66,6 +79,9 @@ export default function ParkingMap({ parkings, onMarkerClick, userLoc, setUserLo
       <MapContainer center={bresciaCoords} zoom={14} style={{ height: '100%', width: '100%' }}>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         
+        {/* Componente di fix per il caricamento */}
+        <MapResizer trigger={parkings.length} />
+
         <Polygon positions={ztlCoords} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.15, weight: 2, dashArray: '5, 5' }}>
           <Tooltip sticky className="font-bold text-red-700">Zona a Traffico Limitato (ZTL)</Tooltip>
         </Polygon>

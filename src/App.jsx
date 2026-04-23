@@ -27,6 +27,29 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Sincronizzazione Realtime del Profilo
+  useEffect(() => {
+    if (!profile?.idpersona) return;
+
+    const channel = supabase
+      .channel(`profile-sync-${profile.idpersona}`)
+      .on(
+        'postgres_changes', 
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'persona', 
+          filter: `idpersona=eq.${profile.idpersona}` 
+        }, 
+        (payload) => {
+          setProfile(payload.new); // Aggiorna lo stato globale istantaneamente
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [profile?.idpersona]);
+
   async function fetchProfile(uuid) {
     const { data } = await supabase.from('persona').select('*').eq('supabase_uuid', uuid).maybeSingle();
     setProfile(data);
@@ -40,11 +63,7 @@ export default function App() {
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
         <Route path="/register" element={!session ? <Register /> : <Navigate to="/" />} />
         <Route path="/profile" element={session ? <Profile profile={profile} /> : <Navigate to="/login" />} />
-        
-        {/* 2. AGGIUNGI LA ROTTA PER IL RECUPERO PASSWORD QUI: */}
         <Route path="/update-password" element={<UpdatePassword />} />
-        
-        {/* ROTTA PROTETTA: Solo se sei admin entri, altrimenti torni alla Home */}
         <Route path="/admin" element={profile?.ruolo === 'admin' ? <AdminDashboard profile={profile} /> : <Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
