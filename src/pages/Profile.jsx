@@ -148,17 +148,36 @@ export default function Profile({ profile, refreshProfile }) {
     showMessage("Sosta annullata.");
   };
 
-  const handleProlungaSosta = async (pren) => {
-    const currentEnd = new Date(pren.orariofine);
-    const newEnd = new Date(currentEnd.getTime() + 60 * 60 * 1000);
+const handleProlungaSosta = async (pren) => {
+    // 1. Prendiamo ESATTAMENTE l'orario di uscita (fine)
+    const endDate = new Date(pren.orariofine);
+    
+    // 2. Aggiungiamo 1 ora precisa all'orologio
+    endDate.setHours(endDate.getHours() + 1);
+
+    // 3. Creiamo la data manualmente per evitare che JS faccia casini con il fuso orario italiano
+    const yyyy = endDate.getFullYear();
+    const mm = String(endDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(endDate.getDate()).padStart(2, '0');
+    const hh = String(endDate.getHours()).padStart(2, '0');
+    const min = String(endDate.getMinutes()).padStart(2, '0');
+    
+    // Formato perfetto per Supabase: "YYYY-MM-DDTHH:MM"
+    const nuovaUscita = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+    
     const nuovoCosto = (parseFloat(pren.costo || 0) + tariffaOraria).toFixed(2);
 
+    // 4. Aggiorniamo in modo chirurgico SOLO l'orario di fine
     const { error } = await supabase.from('prenotazione')
-      .update({ orariofine: newEnd.toISOString(), costo: nuovoCosto })
+      .update({ 
+        orariofine: nuovaUscita, 
+        costo: nuovoCosto 
+      })
       .eq('idprenotazione', pren.idprenotazione);
 
-    if (error) showMessage("Errore prolungamento.");
-    else {
+    if (error) {
+      showMessage("Errore durante il prolungamento.");
+    } else {
       showMessage("Sosta estesa di +1h!");
       loadPrenotazioni();
     }
