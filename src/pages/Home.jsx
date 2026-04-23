@@ -103,7 +103,6 @@ export default function Home({ profile }) {
       const posti = (postiData || []).filter(item => item.idparcheggio === p.idparcheggio);
       const occupati = posti.filter(item => item.stato?.toLowerCase() === 'occupato').length;
       const liberi = (p.postitot || 0) - occupati;
-      const ratio = occupati / (p.postitot || 1);
       
       const freeEV = posti.filter(item => item.tipoposto === 'Elettrico' && item.stato?.toLowerCase() === 'libero').length;
       
@@ -143,9 +142,8 @@ export default function Home({ profile }) {
     }
   };
 
-  // FIX 1: FORMULA PER DISTANZA ESATTA (Haversine) INVECE DI Math.hypot
   const getDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Raggio della terra in km
+    const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = 
@@ -164,7 +162,6 @@ export default function Home({ profile }) {
     if (sortBy === 'liberi') return b.liberi - a.liberi;
     if (sortBy === 'nome') return a.nome?.localeCompare(b.nome);
     if (sortBy === 'vicini' && userLoc) {
-      // Usa getDistance e parseFloat per calcoli geografici corretti
       const distA = getDistance(userLoc.lat, userLoc.lng, parseFloat(a.latitudine), parseFloat(a.longitudine));
       const distB = getDistance(userLoc.lat, userLoc.lng, parseFloat(b.latitudine), parseFloat(b.longitudine));
       return distA - distB;
@@ -186,7 +183,6 @@ export default function Home({ profile }) {
     let targaFinale = selectedTarga === 'manuale' ? nuovaTarga.toUpperCase() : selectedTarga;
     if (selectedTarga === 'manuale' && nuovaTarga.length < 5) return showInternalMessage("Inserisci una targa valida.");
 
-    // FIX 2: CONTROLLO REQUISITI POSTO (REINSERITO)
     if (bookingSpot.tipoposto === 'Disabili' && !profile.is_disabile) {
       return showInternalMessage("Questo posto è riservato a utenti con pass disabili registrato nel profilo.");
     }
@@ -196,9 +192,7 @@ export default function Home({ profile }) {
     if (bookingSpot.tipoposto === 'Elettrico' && alimentazioneVeicolo !== 'Elettrica') {
       return showInternalMessage("Questo stallo è riservato esclusivamente a veicoli elettrici.");
     }
-    // ---------------------------------------------
 
-    // Se si usa una targa manuale, salvala nel DB in background
     if (selectedTarga === 'manuale') {
       await supabase.from('veicolo').upsert([{ 
         idpersona: profile.idpersona, 
@@ -315,7 +309,8 @@ export default function Home({ profile }) {
       
       <div className="flex flex-col lg:flex-row gap-6 lg:h-[600px]">
         
-        <div className="w-full lg:w-2/3 h-full">
+        {/* FIX MAPPA MOBILE: Aggiunto h-[400px] per mobile, z-0 e relative */}
+        <div className="w-full lg:w-2/3 h-[400px] lg:h-full z-0 relative rounded-2xl overflow-hidden shadow-sm">
           <ParkingMap 
             parkings={filteredParkings} 
             onMarkerClick={(id) => setModalData(parkings.find(p => p.idparcheggio === id))} 
@@ -366,11 +361,6 @@ export default function Home({ profile }) {
                 </div>
               );
             })}
-            {filteredParkings.length === 0 && (
-              <div className="text-center py-12 bg-gray-50 rounded-3xl border border-dashed border-gray-300">
-                 <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Nessun risultato trovato</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
