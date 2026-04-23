@@ -18,7 +18,7 @@ export default function Navbar({ session, profile }) {
             <>
               {/* BOTTONE ADMIN UNIFICATO */}
               {isAdmin && (
-                <Link to="/admin" className="bg-emerald-800 hover:bg-emerald-700 text-emerald-50 font-bold px-4 py-2 rounded-full text-sm transition-all shadow-sm border border-emerald-700">
+                <Link to="/admin" className="flex items-center justify-center h-10 bg-emerald-800 hover:bg-emerald-700 text-emerald-50 font-bold px-4 rounded-full text-sm transition-all shadow-sm border border-emerald-700">
                   Area Admin
                 </Link>
               )}
@@ -26,9 +26,9 @@ export default function Navbar({ session, profile }) {
               {/* BOTTONE PROFILO */}
               <Link 
                 to="/profile" 
-                className="flex items-center gap-2 bg-emerald-800 hover:bg-emerald-700 p-1 pr-4 rounded-full transition-all border border-emerald-700 shadow-sm"
+                className="flex items-center h-10 gap-2 bg-emerald-800 hover:bg-emerald-700 p-1 pr-4 rounded-full transition-all border border-emerald-700 shadow-sm"
               >
-                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center font-black text-sm text-emerald-950 shadow-inner">
+                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center font-black text-sm text-emerald-950 shadow-inner shrink-0">
                   {iniziale}
                 </div>
                 <span className="font-bold text-sm text-emerald-50 hidden sm:inline">{profile?.nome || 'Profilo'}</span>
@@ -37,13 +37,13 @@ export default function Navbar({ session, profile }) {
               {/* BOTTONE ESCI ROSSO */}
               <button 
                 onClick={() => supabase.auth.signOut()} 
-                className="bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition-all px-4 py-2 rounded-full shadow-sm"
+                className="flex items-center justify-center h-10 bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition-all px-4 rounded-full shadow-sm border border-red-600"
               >
                 Esci
               </button>
             </>
           ) : (
-            <Link to="/login" className="font-bold bg-white text-emerald-900 px-5 py-2 rounded-full hover:bg-emerald-100 transition shadow-sm">
+            <Link to="/login" className="flex items-center justify-center h-10 font-bold bg-white text-emerald-900 px-5 rounded-full hover:bg-emerald-100 transition shadow-sm border border-transparent">
               Accedi
             </Link>
           )}
