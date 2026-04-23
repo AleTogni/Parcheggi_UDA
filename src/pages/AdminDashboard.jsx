@@ -55,12 +55,21 @@ export default function AdminDashboard({ profile }) {
     const filtered = data.filter(d => new Date(d.orarioinizio) >= startDate);
     const map = {};
 
+    // PRE-COMPILAZIONE DEGLI ASSI X PER AVERE SEMPRE UN GRAFICO COMPLETO
     if (view === 'settimana' || view === 'mese') {
       const daysToGenerate = view === 'settimana' ? 7 : 30;
       for (let i = daysToGenerate; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const key = d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+        map[key] = { label: key, co2: 0, soste: 0 };
+      }
+    } else {
+      // Se è "tutto", pre-compila gli ultimi 12 mesi per non avere un punto singolo isolato
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const key = d.toLocaleDateString('it-IT', { month: 'short', year: '2-digit' });
         map[key] = { label: key, co2: 0, soste: 0 };
       }
     }
