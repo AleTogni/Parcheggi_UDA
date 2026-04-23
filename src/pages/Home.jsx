@@ -379,7 +379,7 @@ export default function Home({ profile }) {
         <div onClick={closeModal} className="fixed inset-0 bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[100] transition-all overflow-y-auto">
           <div onClick={(e) => e.stopPropagation()} className="bg-white p-8 rounded-[2.5rem] max-w-2xl w-full shadow-2xl relative animate-scale-up my-auto">
             <button onClick={closeModal} className="absolute top-6 right-6 text-3xl font-bold text-gray-300 hover:text-gray-800 transition-colors">&times;</button>
-            <h2 className="text-4xl font-black text-gray-900 mb-2 uppercase tracking-tighter">{modalData.nome}</h2>
+            <h2 className="text-4xl font-black text-gray-900 mb-2 tracking-tighter">{modalData.nome}</h2>
             <p className="text-gray-400 font-bold mb-6 uppercase text-xs tracking-[0.2em] border-b pb-4">Gestione sosta</p>
             
             {uiMessage.text && (
@@ -477,7 +477,7 @@ export default function Home({ profile }) {
             <div className="flex items-center gap-4 mb-4">
               <img src={assistantPhoto} alt="Assistente Virtuale" className="w-14 h-14 rounded-full object-cover border-2 border-emerald-600 shadow-sm" />
               <div>
-                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tighter">Assistente Virtuale</h3>
+                <h3 className="text-xl font-black text-gray-900 tracking-tighter">Assistente Virtuale</h3>
                 <p className="text-sm text-gray-500">Ogni risposta arriva dopo il tuo input.</p>
               </div>
             </div>
