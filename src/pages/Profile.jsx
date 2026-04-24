@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../api/supabaseClient';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function Profile({ profile, refreshProfile }) {
   const [form, setForm] = useState({ 
@@ -57,7 +58,6 @@ export default function Profile({ profile, refreshProfile }) {
     setVeicoli(data || []);
   }
 
-  // Ripristinato select con i nomi dei parcheggi e dei piani
   async function loadPrenotazioni() {
     const { data } = await supabase
       .from('prenotazione')
@@ -88,7 +88,6 @@ export default function Profile({ profile, refreshProfile }) {
     }
   };
 
-  // Ripristinata l'aggiunta + modifica (Aggiornamento a catena)
   const handleVeicoloAction = async (e) => {
     e.preventDefault();
     const targaPulita = targa.toUpperCase().trim();
@@ -121,7 +120,6 @@ export default function Profile({ profile, refreshProfile }) {
     }
   };
 
-  // Ripristinato elimina con Optimistic Update
   const deleteVeicolo = async (targaToDelete) => {
     setVeicoli(prev => prev.filter(v => v.targa !== targaToDelete));
     
@@ -148,26 +146,19 @@ export default function Profile({ profile, refreshProfile }) {
     showMessage("Sosta annullata.");
   };
 
-const handleProlungaSosta = async (pren) => {
-    // 1. Prendiamo ESATTAMENTE l'orario di uscita (fine)
+  const handleProlungaSosta = async (pren) => {
     const endDate = new Date(pren.orariofine);
-    
-    // 2. Aggiungiamo 1 ora precisa all'orologio
     endDate.setHours(endDate.getHours() + 1);
 
-    // 3. Creiamo la data manualmente per evitare che JS faccia casini con il fuso orario italiano
     const yyyy = endDate.getFullYear();
     const mm = String(endDate.getMonth() + 1).padStart(2, '0');
     const dd = String(endDate.getDate()).padStart(2, '0');
     const hh = String(endDate.getHours()).padStart(2, '0');
     const min = String(endDate.getMinutes()).padStart(2, '0');
     
-    // Formato perfetto per Supabase: "YYYY-MM-DDTHH:MM"
     const nuovaUscita = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-    
     const nuovoCosto = (parseFloat(pren.costo || 0) + tariffaOraria).toFixed(2);
 
-    // 4. Aggiorniamo in modo chirurgico SOLO l'orario di fine
     const { error } = await supabase.from('prenotazione')
       .update({ 
         orariofine: nuovaUscita, 
@@ -183,7 +174,6 @@ const handleProlungaSosta = async (pren) => {
     }
   };
 
-  // Funzione fornita mantenuta intatta
   const handleDeleteAccount = async () => {
     const { error } = await supabase.rpc('elimina_dati_utente', { p_id: profile.idpersona });
     
@@ -320,7 +310,7 @@ const handleProlungaSosta = async (pren) => {
           </div>
         </div>
 
-        {/* STORICO PRENOTAZIONI */}
+        {/* STORICO PRENOTAZIONI CON QR CODE */}
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-800">Le tue Soste</h2>
@@ -339,10 +329,9 @@ const handleProlungaSosta = async (pren) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
                 {prenoFiltrate.map(p => (
                   <div key={p.idprenotazione} className="p-5 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:border-gray-200 transition-all flex flex-col h-full">
+                    
                     <div className="flex justify-between items-start mb-4">
-                      
                       <div>
-                        {/* Ripristinato il nome vero del parcheggio */}
                         <span className="font-black text-gray-800 text-lg block">
                           {p.posto_auto?.parcheggio?.nome || 'Parcheggio'}
                         </span>
@@ -350,8 +339,6 @@ const handleProlungaSosta = async (pren) => {
                           {p.targa} • {p.posto_auto?.piano}
                         </span>
                       </div>
-
-                      {/* Ripristinato il badge blu per le soste concluse */}
                       <span className={`text-[10px] uppercase px-2 py-1 rounded font-bold border ${
                         p.stato === 'Attiva' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 
                         p.stato === 'Conclusa' ? 'bg-blue-100 text-blue-800 border-blue-200' : 
@@ -361,13 +348,26 @@ const handleProlungaSosta = async (pren) => {
                       </span>
                     </div>
 
-                    <div className="text-xs text-gray-600 space-y-1.5 flex-grow">
-                      <div className="flex justify-between"><span>Arrivo:</span><span className="text-gray-900 font-bold">{formattaData(p.orarioinizio)}</span></div>
-                      <div className="flex justify-between"><span>Uscita:</span><span className="text-gray-900 font-bold">{formattaData(p.orariofine)}</span></div>
-                      <div className="flex justify-between pt-2 border-t border-gray-100 mt-2"><span>Costo:</span><span className="text-emerald-700 font-black">{p.costo ? `${p.costo} €` : '0.00 €'}</span></div>
+                    <div className="flex justify-between items-center flex-grow mb-2">
+                      {/* SINISTRA: Date e Costo */}
+                      <div className="text-xs text-gray-600 space-y-1.5 w-full pr-4">
+                        <div className="flex justify-between"><span>Arrivo:</span><span className="text-gray-900 font-bold">{formattaData(p.orarioinizio)}</span></div>
+                        <div className="flex justify-between"><span>Uscita:</span><span className="text-gray-900 font-bold">{formattaData(p.orariofine)}</span></div>
+                        <div className="flex justify-between pt-2 border-t border-gray-100 mt-2"><span>Costo:</span><span className="text-emerald-700 font-black">{p.costo ? `${p.costo} €` : '0.00 €'}</span></div>
+                      </div>
+
+                      {/* DESTRA: Il nostro nuovo QR Code! */}
+                      {p.stato === 'Attiva' && p.codiceaccesso && (
+                        <div className="flex flex-col items-center bg-white p-2 rounded-xl border border-gray-200 shadow-sm shrink-0">
+                           <QRCodeSVG value={p.codiceaccesso} size={64} fgColor="#064e3b" />
+                           <span className="text-[9px] font-black font-mono text-emerald-800 mt-1 tracking-widest">{p.codiceaccesso}</span>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Bottoni in basso */}
                     {p.stato === 'Attiva' && (
-                      <div className="flex gap-2 mt-5">
+                      <div className="flex gap-2 mt-auto pt-3 border-t border-gray-100">
                         <button onClick={() => handleProlungaSosta(p)} className="flex-1 py-2.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm">Prolunga +1h</button>
                         <button onClick={() => executeCancelBooking(p)} className="flex-1 py-2.5 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 hover:border-red-300 transition-all">Annulla Sosta</button>
                       </div>

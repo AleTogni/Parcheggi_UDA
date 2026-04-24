@@ -169,7 +169,7 @@ export default function Home({ profile }) {
     return 0;
   });
 
-  const handleConfirmBooking = async () => {
+const handleConfirmBooking = async () => {
     if (!bookingSpot) return;
 
     const start = new Date(bookingStart);
@@ -183,6 +183,7 @@ export default function Home({ profile }) {
     let targaFinale = selectedTarga === 'manuale' ? nuovaTarga.toUpperCase() : selectedTarga;
     if (selectedTarga === 'manuale' && nuovaTarga.length < 5) return showInternalMessage("Inserisci una targa valida.");
 
+    // Controllo requisiti posto
     if (bookingSpot.tipoposto === 'Disabili' && !profile.is_disabile) {
       return showInternalMessage("Questo posto è riservato a utenti con pass disabili registrato nel profilo.");
     }
@@ -202,16 +203,42 @@ export default function Home({ profile }) {
     }
 
     const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    // 1. Inserimento prenotazione
     const { error: errPren } = await supabase.from('prenotazione').insert([{
-      idpersona: profile.idpersona, targa: targaFinale, idposto: bookingSpot.idposto,
-      codiceaccesso: accessCode, orarioinizio: bookingStart, orariofine: bookingEnd,
-      stato: 'Attiva', costo: preventivo
+      idpersona: profile.idpersona, 
+      targa: targaFinale, 
+      idposto: bookingSpot.idposto,
+      codiceaccesso: accessCode, 
+      orarioinizio: bookingStart, 
+      orariofine: bookingEnd,
+      stato: 'Attiva', 
+      costo: preventivo
     }]);
 
     if (errPren) return showInternalMessage("Errore: " + errPren.message);
 
+    // 2. Aggiornamento stato posto
     await supabase.from('posto_auto').update({ stato: 'Occupato' }).eq('idposto', bookingSpot.idposto);
     
+    // --- 3. INVIO EMAIL TRAMITE EDGE FUNCTION ---
+    // Nota: Assicurati che 'profile.email' esista. Se l'email è nell'auth di Supabase, 
+    // potresti doverla passare diversamente o aggiungerla alla tabella 'persona'.
+    try {
+      await supabase.functions.invoke('send-confirmation-email', {
+        body: { 
+          email: profile.email, // L'indirizzo del destinatario
+          nome: profile.nome, 
+          codiceAccesso: accessCode, 
+          parcheggio: modalData.nome 
+        }
+      });
+    } catch (emailErr) {
+      console.error("Errore durante l'invio dell'email:", emailErr);
+      // Non blocchiamo l'utente se l'email fallisce, la prenotazione è comunque valida
+    }
+    // --------------------------------------------
+
     showInternalMessage("Prenotazione confermata con successo!", "success");
     setTimeout(() => { closeModal(); loadData(); }, 2000);
   };
