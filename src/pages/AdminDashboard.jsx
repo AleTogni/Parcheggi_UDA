@@ -16,12 +16,15 @@ export default function AdminDashboard({ profile }) {
   const [activeTab, setActiveTab] = useState('attive'); 
   const [allBookingsData, setAllBookingsData] = useState([]);
   const [confirmCancelId, setConfirmCancelId] = useState(null);
-  const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null); // Stato per la conferma eliminazione utente
+  const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null); 
 
   const [filterParkingId, setFilterParkingId] = useState('all');
 
   const [chartData, setChartData] = useState([]);
   const [chartView, setChartView] = useState('settimana');
+
+  const [searchUserTerm, setSearchUserTerm] = useState('');
+  const [filterUserRole, setFilterUserRole] = useState('all');
 
   useEffect(() => { loadDashboardData(); }, [chartView]);
 
@@ -161,7 +164,6 @@ export default function AdminDashboard({ profile }) {
     showMessage("Download iniziato.");
   };
 
-  // --- NUOVA LOGICA UTENTI: PROMUOVI AD ADMIN ---
   const handleMakeAdmin = async (utente) => {
     const { error } = await supabase.from('persona').update({ ruolo: 'admin' }).eq('idpersona', utente.idpersona);
     if (error) {
@@ -172,9 +174,7 @@ export default function AdminDashboard({ profile }) {
     }
   };
 
-  // --- NUOVA LOGICA UTENTI: ELIMINAZIONE DEFINITIVA ---
   const handleDeleteUser = async (utente) => {
-    // Usiamo la stessa funzione RPC usata nel profilo utente, passandogli l'ID da eliminare
     const { error } = await supabase.rpc('elimina_dati_utente', { p_id: utente.idpersona });
     
     if (error) {
@@ -215,6 +215,17 @@ export default function AdminDashboard({ profile }) {
     const tabMatch = activeTab === 'attive' ? p.stato === 'Attiva' : p.stato !== 'Attiva';
     const parkingMatch = filterParkingId === 'all' || String(p.idparcheggio) === String(filterParkingId);
     return tabMatch && parkingMatch;
+  });
+
+  const filteredUtenti = listaUtenti.filter(u => {
+    const matchSearch = (u.nome?.toLowerCase() || '').includes(searchUserTerm.toLowerCase()) ||
+                        (u.cognome?.toLowerCase() || '').includes(searchUserTerm.toLowerCase()) ||
+                        String(u.idpersona).toLowerCase().includes(searchUserTerm.toLowerCase());
+    
+    const ruoloCorrente = u.ruolo || 'user';
+    const matchRole = filterUserRole === 'all' ? true : ruoloCorrente === filterUserRole;
+    
+    return matchSearch && matchRole;
   });
 
   return (
@@ -381,92 +392,126 @@ export default function AdminDashboard({ profile }) {
         </div>
       </div>
 
-      {/* SEZIONE: TABELLA GESTIONE UTENTI (CON SCROLLBAR) */}
+      {/* SEZIONE: TABELLA GESTIONE UTENTI (CON SCROLLBAR E FILTRI E ALTEZZA FISSA) */}
       <div className="bg-white pt-8 pb-4 rounded-3xl border border-gray-200 shadow-sm mb-8 overflow-hidden">
-        <div className="flex justify-between items-center px-8 mb-6 border-b border-gray-100 pb-4">
+        
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center px-8 mb-6 border-b border-gray-100 pb-4 gap-4">
           <div>
             <h2 className="text-xl font-black text-gray-800">Gestione Utenti</h2>
             <p className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest">Controlla e modera gli iscritti</p>
           </div>
+          
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+             <input 
+               type="text" 
+               placeholder="Cerca per nome o ID..." 
+               value={searchUserTerm}
+               onChange={(e) => setSearchUserTerm(e.target.value)}
+               className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-bold bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none w-full sm:w-64 transition-all"
+             />
+             <select 
+               value={filterUserRole} 
+               onChange={(e) => setFilterUserRole(e.target.value)}
+               className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-bold bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all cursor-pointer"
+             >
+               <option value="all">Tutti i ruoli</option>
+               <option value="utente">Utenti standard</option>
+               <option value="admin">Amministratori</option>
+             </select>
+          </div>
         </div>
         
-        {/* Contenitore con altezza fissa e scrollbar verticale */}
-        <div className="overflow-y-auto max-h-[400px] custom-scrollbar px-8">
-          <table className="w-full text-left border-collapse relative">
-            <thead className="sticky top-0 bg-white z-10 shadow-sm">
-              <tr className="border-b border-gray-100">
-                <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-white">Utente</th>
-                <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-white">Contatti</th>
-                <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-white">Ruolo</th>
-                <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider text-right bg-white">Azioni</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {listaUtenti.map(utente => (
-                <tr key={utente.idpersona} className="transition-colors hover:bg-gray-50">
-                  <td className="p-3">
-                    <p className="font-bold text-gray-800">{utente.nome || 'Utente'} {utente.cognome || ''}</p>
-                    <p className="text-[10px] text-gray-400 font-mono">ID: {String(utente.idpersona).substring(0, 8)}</p>
-                  </td>
-                  <td className="p-3 text-sm font-medium text-gray-600">
-                    {utente.telefono || 'N/A'}<br/>
-                    <span className="text-xs text-gray-400">{utente.citta || ''}</span>
-                  </td>
-                  <td className="p-3">
-                    <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase border ${
-                      utente.ruolo === 'admin' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                      'bg-gray-100 text-gray-600 border-gray-200'
-                    }`}>
-                      {utente.ruolo || 'user'}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right">
-                    {/* Non puoi eliminare o modificare te stesso dal pannello utenti */}
-                    {utente.idpersona !== profile?.idpersona && (
-                      <div className="flex justify-end gap-2 items-center">
-                        
-                        {utente.ruolo !== 'admin' && (
-                          <button 
-                            onClick={() => handleMakeAdmin(utente)}
-                            className="text-[10px] font-bold px-2 py-1.5 rounded-lg border text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 transition-all uppercase"
-                          >
-                            Rendi Admin
-                          </button>
-                        )}
-
-                        {/* Sistema di doppia conferma per l'eliminazione */}
-                        {confirmDeleteUserId === utente.idpersona ? (
-                          <div className="flex gap-1 animate-in fade-in zoom-in duration-200">
-                            <button 
-                              onClick={() => handleDeleteUser(utente)}
-                              className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-red-600 text-white uppercase hover:bg-red-700 shadow-sm"
-                            >
-                              Conferma
-                            </button>
-                            <button 
-                              onClick={() => setConfirmDeleteUserId(null)}
-                              className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-gray-200 text-gray-700 uppercase hover:bg-gray-300"
-                            >
-                              Annulla
-                            </button>
-                          </div>
-                        ) : (
-                          <button 
-                            onClick={() => setConfirmDeleteUserId(utente.idpersona)}
-                            className="text-[10px] font-bold px-2 py-1.5 rounded-lg border text-red-600 bg-white border-red-200 hover:bg-red-50 transition-all uppercase"
-                          >
-                            Elimina
-                          </button>
-                        )}
-                        
-                      </div>
-                    )}
-                  </td>
+        {/* FIX ALTEZZA: h-[400px] forza un'altezza fissa, evitando che la pagina salti su e giù */}
+        <div className="overflow-y-auto h-[400px] custom-scrollbar px-8 relative">
+          {filteredUtenti.length > 0 ? (
+            <table className="w-full text-left border-collapse relative">
+              <thead className="sticky top-0 bg-white z-10 shadow-sm">
+                <tr className="border-b border-gray-100">
+                  <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-white">Utente</th>
+                  <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-white">Contatti</th>
+                  <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-white">Ruolo</th>
+                  <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider text-center bg-white">Azioni</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {listaUtenti.length === 0 && <p className="text-center py-6 text-gray-400 text-sm font-bold">Nessun utente trovato.</p>}
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filteredUtenti.map(utente => (
+                  <tr key={utente.idpersona} className="transition-colors hover:bg-gray-50">
+                    <td className="p-3">
+                      <p className="font-bold text-gray-800">{utente.nome || 'Utente'} {utente.cognome || ''}</p>
+                      <p className="text-[10px] text-gray-400 font-mono">ID: {String(utente.idpersona).substring(0, 8)}</p>
+                    </td>
+                    <td className="p-3 text-sm font-medium text-gray-600">
+                      {utente.telefono || 'N/A'}<br/>
+                      <span className="text-xs text-gray-400">{utente.citta || ''}</span>
+                    </td>
+                    <td className="p-3">
+                      <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase border ${
+                        utente.ruolo === 'admin' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                        'bg-gray-100 text-gray-600 border-gray-200'
+                      }`}>
+                        {utente.ruolo || 'user'}
+                      </span>
+                    </td>
+<td className="p-3 text-center">
+                      {utente.idpersona !== profile?.idpersona ? (
+                        /* FIX ALLINEAMENTO: Usiamo una griglia fissa larga circa 200px */
+                        <div className="grid grid-cols-2 gap-2 w-52 mx-auto">
+                          
+                          {/* SLOT SINISTRO: Rendi Admin (o spazio vuoto) */}
+                          <div>
+                            {utente.ruolo !== 'admin' && (
+                              <button 
+                                onClick={() => handleMakeAdmin(utente)}
+                                className="w-full text-[10px] font-bold px-3 py-2 rounded-lg border text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 transition-all uppercase"
+                              >
+                                Rendi Admin
+                              </button>
+                            )}
+                          </div>
+
+                          {/* SLOT DESTRO: Elimina (o Conferma/Annulla) */}
+                          <div>
+                            {confirmDeleteUserId === utente.idpersona ? (
+                              <div className="flex gap-1 animate-in fade-in zoom-in duration-200">
+                                <button 
+                                  onClick={() => handleDeleteUser(utente)}
+                                  className="w-full text-[10px] font-bold px-1 py-2 rounded-lg bg-red-600 text-white uppercase hover:bg-red-700 shadow-sm transition-all"
+                                >
+                                  Conf.
+                                </button>
+                                <button 
+                                  onClick={() => setConfirmDeleteUserId(null)}
+                                  className="w-full text-[10px] font-bold px-1 py-2 rounded-lg bg-gray-200 text-gray-700 uppercase hover:bg-gray-300 transition-all"
+                                >
+                                  Ann.
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={() => setConfirmDeleteUserId(utente.idpersona)}
+                                className="w-full text-[10px] font-bold px-3 py-2 rounded-lg border text-red-600 bg-white border-red-200 hover:bg-red-50 transition-all uppercase"
+                              >
+                                Elimina
+                              </button>
+                            )}
+                          </div>
+                          
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 px-3 py-1 rounded-lg">Il tuo account</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <p className="text-gray-400 text-sm font-bold bg-gray-50 px-6 py-4 rounded-2xl border border-dashed border-gray-200">
+                Nessun utente trovato per questi filtri.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

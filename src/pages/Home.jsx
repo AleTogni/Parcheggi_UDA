@@ -37,7 +37,7 @@ export default function Home({ profile }) {
     "Ricorda che i posti per disabili sono contrassegnati con l'icona H.",
     "Le colonnine elettriche sono disponibili nei parcheggi selezionati.",
     "Per qualsiasi domanda, consulta la sezione profilo o contatta il supporto.",
-    "Abbiamo finito i token per generare risposte AI e perciò dobbiamo contattare l'assistenza."
+    "Abbiamo finito i token per generare le risposte AI, ti chiediamo di contattare l'assistenza."
   ];
 
   const assistantPhoto = '/shared image.jpg';
@@ -495,7 +495,6 @@ const handleConfirmBooking = async () => {
               <img src={assistantPhoto} alt="Assistente Virtuale" className="w-14 h-14 rounded-full object-cover border-2 border-emerald-600 shadow-sm" />
               <div>
                 <h3 className="text-xl font-black text-gray-900 tracking-tighter">Assistente Virtuale</h3>
-                <p className="text-sm text-gray-500">Ogni risposta arriva dopo il tuo input.</p>
               </div>
             </div>
 
