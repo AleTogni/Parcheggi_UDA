@@ -1,33 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../api/supabaseClient';
-// Librerie per il grafico
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function AdminDashboard({ profile }) {
   const [stats, setStats] = useState({ utenti: 0, parcheggi: 0, posti: 0, attive: 0, totaliValide: 0 });
   const [listaParcheggi, setListaParcheggi] = useState([]);
   
+  const [listaUtenti, setListaUtenti] = useState([]);
+  
   const [newParking, setNewParking] = useState({ nome: '', postitot: 100, coperto: true, latitudine: 45.54, longitudine: 10.22 });
   const [newSpot, setNewSpot] = useState({ idparcheggio: '', piano: '', tipoposto: 'Standard' });
   const [uiMessage, setUiMessage] = useState('');
 
-  // GESTIONE MODALE E TABS
   const [showBookingsModal, setShowBookingsModal] = useState(false);
   const [activeTab, setActiveTab] = useState('attive'); 
   const [allBookingsData, setAllBookingsData] = useState([]);
   const [confirmCancelId, setConfirmCancelId] = useState(null);
+  const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null); // Stato per la conferma eliminazione utente
 
-  // NUOVO STATO: FILTRO PARCHEGGIO PER IL REGISTRO
   const [filterParkingId, setFilterParkingId] = useState('all');
 
-  // STATI PER IL GRAFICO REALE
   const [chartData, setChartData] = useState([]);
   const [chartView, setChartView] = useState('settimana');
 
   useEffect(() => { loadDashboardData(); }, [chartView]);
 
   const loadDashboardData = async () => {
-    const { count: u } = await supabase.from('persona').select('*', { count: 'exact', head: true });
+    const { count: u, data: utentiData } = await supabase.from('persona').select('*', { count: 'exact' });
     const { count: po } = await supabase.from('posto_auto').select('*', { count: 'exact', head: true });
     const { count: at } = await supabase.from('prenotazione').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
     const { count: val } = await supabase.from('prenotazione').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
@@ -40,6 +39,8 @@ export default function AdminDashboard({ profile }) {
 
     setStats({ utenti: u || 0, parcheggi: p?.length || 0, posti: po || 0, attive: at || 0, totaliValide: val || 0 });
     setListaParcheggi(p || []);
+    
+    if (utentiData) setListaUtenti(utentiData);
     if (p && p.length > 0 && !newSpot.idparcheggio) setNewSpot(prev => ({ ...prev, idparcheggio: p[0].idparcheggio }));
   };
 
@@ -55,7 +56,6 @@ export default function AdminDashboard({ profile }) {
     const filtered = data.filter(d => new Date(d.orarioinizio) >= startDate);
     const map = {};
 
-    // PRE-COMPILAZIONE DEGLI ASSI X PER AVERE SEMPRE UN GRAFICO COMPLETO
     if (view === 'settimana' || view === 'mese') {
       const daysToGenerate = view === 'settimana' ? 7 : 30;
       for (let i = daysToGenerate; i >= 0; i--) {
@@ -65,7 +65,6 @@ export default function AdminDashboard({ profile }) {
         map[key] = { label: key, co2: 0, soste: 0 };
       }
     } else {
-      // Se è "tutto", pre-compila gli ultimi 12 mesi per non avere un punto singolo isolato
       for (let i = 11; i >= 0; i--) {
         const d = new Date();
         d.setMonth(d.getMonth() - i);
@@ -114,7 +113,7 @@ export default function AdminDashboard({ profile }) {
         return {
            ...p,
            nomeParcheggio: parking ? parking.nome : 'Sconosciuto',
-           idparcheggio: parking ? parking.idparcheggio : null, // AGGIUNTO PER FILTRO
+           idparcheggio: parking ? parking.idparcheggio : null,
            pianoPosto: posto ? posto.piano : 'N/A'
         };
       });
@@ -130,6 +129,62 @@ export default function AdminDashboard({ profile }) {
     showMessage("Sosta terminata forzatamente.");
     loadDashboardData();
     handleOpenBookings(); 
+  };
+
+  const handleExportCSV = () => {
+    if (allBookingsData.length === 0) return showMessage("Nessun dato da esportare.");
+
+    const headers = ["ID_Sosta", "Targa", "Parcheggio", "Piano", "Arrivo", "Uscita", "Stato", "Costo_EUR"];
+    
+    const csvRows = allBookingsData.map(p => {
+      return [
+        p.idprenotazione,
+        p.targa,
+        `"${p.nomeParcheggio}"`,
+        `"${p.pianoPosto}"`,
+        formattaData(p.orarioinizio).replace(/,/g, ''),
+        formattaData(p.orariofine).replace(/,/g, ''),
+        p.stato,
+        p.costo || '0.00'
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...csvRows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `Export_Soste_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showMessage("Download iniziato.");
+  };
+
+  // --- NUOVA LOGICA UTENTI: PROMUOVI AD ADMIN ---
+  const handleMakeAdmin = async (utente) => {
+    const { error } = await supabase.from('persona').update({ ruolo: 'admin' }).eq('idpersona', utente.idpersona);
+    if (error) {
+      showMessage("Errore durante la promozione ad Admin.");
+    } else {
+      showMessage(`${utente.nome} ora è un Amministratore.`);
+      loadDashboardData();
+    }
+  };
+
+  // --- NUOVA LOGICA UTENTI: ELIMINAZIONE DEFINITIVA ---
+  const handleDeleteUser = async (utente) => {
+    // Usiamo la stessa funzione RPC usata nel profilo utente, passandogli l'ID da eliminare
+    const { error } = await supabase.rpc('elimina_dati_utente', { p_id: utente.idpersona });
+    
+    if (error) {
+      console.error(error);
+      showMessage("Errore. Verifica i permessi della funzione elimina_dati_utente nel database.");
+    } else {
+      showMessage("Utente eliminato definitivamente e storico rimosso.");
+      setConfirmDeleteUserId(null);
+      loadDashboardData();
+    }
   };
 
   const handleAddParking = async (e) => {
@@ -156,7 +211,6 @@ export default function AdminDashboard({ profile }) {
 
   const co2Risparmiata = (stats.totaliValide * 0.25 * 2.5).toFixed(1);
 
-  // AGGIORNATO: LOGICA DI FILTRAGGIO DOPPIA (TAB + PARCHEGGIO SELEZIONATO)
   const filteredBookings = allBookingsData.filter(p => {
     const tabMatch = activeTab === 'attive' ? p.stato === 'Attiva' : p.stato !== 'Attiva';
     const parkingMatch = filterParkingId === 'all' || String(p.idparcheggio) === String(filterParkingId);
@@ -164,12 +218,12 @@ export default function AdminDashboard({ profile }) {
   });
 
   return (
-    <div className="max-w-7xl mx-auto p-6 mt-6">
+    <div className="max-w-7xl mx-auto p-6 mt-6 relative z-0">
       
       <div className="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
         <div>
           <h1 className="text-3xl font-black text-emerald-900 tracking-tight">Centro Operativo</h1>
-          <p className="text-gray-500 font-medium text-sm mt-1">Pannello Admin • {profile?.nome}</p>
+          <p className="text-gray-500 font-medium text-sm mt-1">Pannello Admin • {profile?.nome || 'Admin'}</p>
         </div>
         {uiMessage && <div className="bg-gray-800 text-white px-5 py-2 rounded-lg font-bold shadow-md animate-pulse text-xs">{uiMessage}</div>}
       </div>
@@ -327,7 +381,96 @@ export default function AdminDashboard({ profile }) {
         </div>
       </div>
 
-      {/* MODALE REGISTRO PRENOTAZIONI CON MENU A TENDINA PARCHEGGIO */}
+      {/* SEZIONE: TABELLA GESTIONE UTENTI (CON SCROLLBAR) */}
+      <div className="bg-white pt-8 pb-4 rounded-3xl border border-gray-200 shadow-sm mb-8 overflow-hidden">
+        <div className="flex justify-between items-center px-8 mb-6 border-b border-gray-100 pb-4">
+          <div>
+            <h2 className="text-xl font-black text-gray-800">Gestione Utenti</h2>
+            <p className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest">Controlla e modera gli iscritti</p>
+          </div>
+        </div>
+        
+        {/* Contenitore con altezza fissa e scrollbar verticale */}
+        <div className="overflow-y-auto max-h-[400px] custom-scrollbar px-8">
+          <table className="w-full text-left border-collapse relative">
+            <thead className="sticky top-0 bg-white z-10 shadow-sm">
+              <tr className="border-b border-gray-100">
+                <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-white">Utente</th>
+                <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-white">Contatti</th>
+                <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-white">Ruolo</th>
+                <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider text-right bg-white">Azioni</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {listaUtenti.map(utente => (
+                <tr key={utente.idpersona} className="transition-colors hover:bg-gray-50">
+                  <td className="p-3">
+                    <p className="font-bold text-gray-800">{utente.nome || 'Utente'} {utente.cognome || ''}</p>
+                    <p className="text-[10px] text-gray-400 font-mono">ID: {String(utente.idpersona).substring(0, 8)}</p>
+                  </td>
+                  <td className="p-3 text-sm font-medium text-gray-600">
+                    {utente.telefono || 'N/A'}<br/>
+                    <span className="text-xs text-gray-400">{utente.citta || ''}</span>
+                  </td>
+                  <td className="p-3">
+                    <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase border ${
+                      utente.ruolo === 'admin' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                      'bg-gray-100 text-gray-600 border-gray-200'
+                    }`}>
+                      {utente.ruolo || 'user'}
+                    </span>
+                  </td>
+                  <td className="p-3 text-right">
+                    {/* Non puoi eliminare o modificare te stesso dal pannello utenti */}
+                    {utente.idpersona !== profile?.idpersona && (
+                      <div className="flex justify-end gap-2 items-center">
+                        
+                        {utente.ruolo !== 'admin' && (
+                          <button 
+                            onClick={() => handleMakeAdmin(utente)}
+                            className="text-[10px] font-bold px-2 py-1.5 rounded-lg border text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 transition-all uppercase"
+                          >
+                            Rendi Admin
+                          </button>
+                        )}
+
+                        {/* Sistema di doppia conferma per l'eliminazione */}
+                        {confirmDeleteUserId === utente.idpersona ? (
+                          <div className="flex gap-1 animate-in fade-in zoom-in duration-200">
+                            <button 
+                              onClick={() => handleDeleteUser(utente)}
+                              className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-red-600 text-white uppercase hover:bg-red-700 shadow-sm"
+                            >
+                              Conferma
+                            </button>
+                            <button 
+                              onClick={() => setConfirmDeleteUserId(null)}
+                              className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-gray-200 text-gray-700 uppercase hover:bg-gray-300"
+                            >
+                              Annulla
+                            </button>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => setConfirmDeleteUserId(utente.idpersona)}
+                            className="text-[10px] font-bold px-2 py-1.5 rounded-lg border text-red-600 bg-white border-red-200 hover:bg-red-50 transition-all uppercase"
+                          >
+                            Elimina
+                          </button>
+                        )}
+                        
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {listaUtenti.length === 0 && <p className="text-center py-6 text-gray-400 text-sm font-bold">Nessun utente trovato.</p>}
+        </div>
+      </div>
+
+      {/* MODALE REGISTRO PRENOTAZIONI */}
       {showBookingsModal && (
         <div onClick={() => setShowBookingsModal(false)} className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] cursor-pointer">
           <div onClick={e => e.stopPropagation()} className="bg-white p-8 rounded-3xl max-w-4xl w-full shadow-2xl relative cursor-default flex flex-col max-h-[85vh]">
@@ -336,7 +479,6 @@ export default function AdminDashboard({ profile }) {
               <h2 className="text-2xl font-black text-gray-900">Registro Prenotazioni</h2>
               
               <div className="flex flex-wrap items-center gap-4">
-                {/* MENU A TENDINA: FOCUS PARCHEGGIO */}
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Focus:</span>
                   <select 
@@ -355,6 +497,13 @@ export default function AdminDashboard({ profile }) {
                   <button onClick={() => setActiveTab('attive')} className={`px-4 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'attive' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>In corso</button>
                   <button onClick={() => setActiveTab('storico')} className={`px-4 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'storico' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>Storico</button>
                 </div>
+
+                <button 
+                  onClick={handleExportCSV} 
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all"
+                >
+                  Esporta CSV
+                </button>
               </div>
 
               <button onClick={() => setShowBookingsModal(false)} className="text-3xl font-bold text-gray-300 hover:text-gray-600 transition-colors">&times;</button>
