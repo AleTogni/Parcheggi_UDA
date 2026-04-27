@@ -229,9 +229,9 @@ export default function AdminDashboard({ profile }) {
   });
 
   return (
-    <div className="max-w-7xl mx-auto p-6 mt-6 relative z-0">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-4 sm:mt-6 relative z-0">
       
-      <div className="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 border-b border-gray-200 pb-4">
         <div>
           <h1 className="text-3xl font-black text-emerald-900 tracking-tight">Centro Operativo</h1>
           <p className="text-gray-500 font-medium text-sm mt-1">Pannello Admin • {profile?.nome || 'Admin'}</p>
@@ -422,9 +422,9 @@ export default function AdminDashboard({ profile }) {
         </div>
         
         {/* FIX ALTEZZA: h-[400px] forza un'altezza fissa, evitando che la pagina salti su e giù */}
-        <div className="overflow-y-auto h-[400px] custom-scrollbar px-8 relative">
+        <div className="overflow-x-auto overflow-y-auto h-[400px] custom-scrollbar px-3 sm:px-8 relative">
           {filteredUtenti.length > 0 ? (
-            <table className="w-full text-left border-collapse relative">
+            <table className="w-full min-w-[600px] text-left border-collapse relative">
               <thead className="sticky top-0 bg-white z-10 shadow-sm">
                 <tr className="border-b border-gray-100">
                   <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-white">Utente</th>
@@ -518,9 +518,9 @@ export default function AdminDashboard({ profile }) {
       {/* MODALE REGISTRO PRENOTAZIONI */}
       {showBookingsModal && (
         <div onClick={() => setShowBookingsModal(false)} className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] cursor-pointer">
-          <div onClick={e => e.stopPropagation()} className="bg-white p-8 rounded-3xl max-w-4xl w-full shadow-2xl relative cursor-default flex flex-col max-h-[85vh]">
+          <div onClick={e => e.stopPropagation()} className="bg-white p-4 sm:p-8 rounded-3xl max-w-4xl w-full shadow-2xl relative cursor-default flex flex-col max-h-[90vh]">
             
-            <div className="flex flex-col md:flex-row justify-between items-center border-b border-gray-100 pb-4 mb-6 gap-4">
+            <div className="flex flex-col gap-3 border-b border-gray-100 pb-4 mb-4">
               <h2 className="text-2xl font-black text-gray-900">Registro Prenotazioni</h2>
               
               <div className="flex flex-wrap items-center gap-4">

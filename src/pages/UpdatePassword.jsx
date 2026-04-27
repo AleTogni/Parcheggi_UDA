@@ -20,7 +20,7 @@ export default function UpdatePassword() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
+    <div className="flex flex-col items-center justify-center min-h-[calc(100svh-64px)] px-4">
       <form onSubmit={handleUpdate} className="bg-white p-10 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
         <h2 className="text-2xl mb-6 font-black text-center text-emerald-800">Nuova Password</h2>
         
