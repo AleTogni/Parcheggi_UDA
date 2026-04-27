@@ -26,6 +26,9 @@ export default function Navbar({ session, profile }) {
                   Area Admin
                 </Link>
               )}
+              <Link to="/rewards" className="flex items-center gap-1 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-black">
+                🍃 {profile?.punti_accumulati || 0}
+              </Link>
               <Link
                 to="/profile"
                 className="flex items-center h-10 gap-2 bg-emerald-800 hover:bg-emerald-700 p-1 pr-4 rounded-full transition-all border border-emerald-700 shadow-sm"
@@ -52,9 +55,9 @@ export default function Navbar({ session, profile }) {
         {/* MOBILE: avatar + hamburger */}
         <div className="flex sm:hidden items-center gap-2">
           {session && (
-            <Link to="/profile" onClick={closeMenu} className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center font-black text-sm text-emerald-950 shadow-inner shrink-0 border-2 border-emerald-300">
-              {iniziale}
-            </Link>
+                          <Link to="/rewards" className="flex items-center gap-1 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-black">
+                🍃 {profile?.punti_accumulati || 0}
+              </Link>
           )}
           <button
             onClick={() => setMenuOpen(prev => !prev)}

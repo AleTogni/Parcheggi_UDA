@@ -523,35 +523,51 @@ export default function AdminDashboard({ profile }) {
             <div className="flex flex-col gap-3 border-b border-gray-100 pb-4 mb-4">
               <h2 className="text-2xl font-black text-gray-900">Registro Prenotazioni</h2>
               
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Focus:</span>
-                  <select 
-                    value={filterParkingId} 
-                    onChange={(e) => setFilterParkingId(e.target.value)}
-                    className="p-1.5 rounded-lg border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:ring-2 focus:ring-emerald-500"
+              {/* CONTENITORE PRINCIPALE: justify-between e items-start (o center) */}
+              <div className="flex flex-row items-center justify-between w-full gap-2 sm:gap-4">
+                
+                {/* GRUPPO DI SINISTRA: Permette il wrap interno dei filtri senza spostare la X */}
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 flex-1">
+                  
+                  {/* Select Focus */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden xs:inline">Focus:</span>
+                    <select 
+                      value={filterParkingId} 
+                      onChange={(e) => setFilterParkingId(e.target.value)}
+                      className="p-1.5 rounded-lg border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:ring-2 focus:ring-emerald-500 max-w-[120px] sm:max-w-none"
+                    >
+                      <option value="all">Tutti</option>
+                      {listaParcheggi.map(park => (
+                        <option key={park.idparcheggio} value={park.idparcheggio}>{park.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Tabs Switch */}
+                  <div className="flex bg-gray-100 p-1 rounded-lg shrink-0">
+                    <button onClick={() => setActiveTab('attive')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'attive' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>In corso</button>
+                    <button onClick={() => setActiveTab('storico')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'storico' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>Storico</button>
+                  </div>
+
+                  {/* Bottone CSV */}
+                  <button 
+                    onClick={handleExportCSV} 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm transition-all shrink-0"
                   >
-                    <option value="all">Tutti i Parcheggi</option>
-                    {listaParcheggi.map(park => (
-                      <option key={park.idparcheggio} value={park.idparcheggio}>{park.nome}</option>
-                    ))}
-                  </select>
+                    esporta CSV
+                  </button>
                 </div>
 
-                <div className="flex bg-gray-100 p-1 rounded-lg">
-                  <button onClick={() => setActiveTab('attive')} className={`px-4 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'attive' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>In corso</button>
-                  <button onClick={() => setActiveTab('storico')} className={`px-4 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'storico' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>Storico</button>
-                </div>
-
+                {/* PULSANTE A DESTRA: shrink-0 impedisce alla X di rimpicciolirsi o spostarsi */}
                 <button 
-                  onClick={handleExportCSV} 
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all"
+                  onClick={() => setShowBookingsModal(false)} 
+                  className="text-3xl font-bold text-gray-300 hover:text-gray-600 transition-colors leading-none p-2 shrink-0"
+                  aria-label="Chiudi"
                 >
-                  Esporta CSV
+                  &times;
                 </button>
               </div>
-
-              <button onClick={() => setShowBookingsModal(false)} className="text-3xl font-bold text-gray-300 hover:text-gray-600 transition-colors">&times;</button>
             </div>
 
             <div className="h-[500px] overflow-y-auto space-y-3 pr-2 custom-scrollbar">

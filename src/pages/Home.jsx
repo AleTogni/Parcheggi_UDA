@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../api/supabaseClient';
 import ParkingMap from '../components/parkingmap';
+import { calcolaPuntiSosta } from '../utils/gamification';
+
 
 export default function Home({ profile }) {
   const [parkings, setParkings] = useState([]);
@@ -185,7 +187,18 @@ export default function Home({ profile }) {
         body: { email: profile.email, nome: profile.nome, codiceAccesso: accessCode, parcheggio: modalData.nome }
       });
     } catch (emailErr) { console.error("Errore invio email:", emailErr); }
-    showInternalMessage("Prenotazione confermata con successo!", "success");
+
+    const veicoloSelezionato = userVehicles.find(v => v.targa === selectedTarga);
+    const tipoAlimentazione = veicoloSelezionato ? veicoloSelezionato.alimentazione : 'Termica';
+    const puntiGuadagnati = calcolaPuntiSosta(bookingStart, bookingEnd, tipoAlimentazione);
+    const { error: pError } = await supabase
+    .from('persona')
+    .update({ punti_accumulati: (profile.punti_accumulati || 0) + puntiGuadagnati })
+    .eq('idpersona', profile.idpersona);
+
+    if (!pError) {
+      setUiMessage({ text: `Prenotazione confermata! Hai guadagnato ${puntiGuadagnati} EcoPoints!`, type: 'success' });
+    }
     setTimeout(() => { closeModal(); loadData(); }, 2000);
   };
 
