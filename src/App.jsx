@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
+import Rewards from './pages/Rewards';
 import UpdatePassword from './pages/UpdatePassword';
 
 export default function App() {
@@ -79,6 +80,7 @@ export default function App() {
         <Route path="/profile" element={session ? <Profile profile={profile} /> : <Navigate to="/login" />} />
         <Route path="/update-password" element={<UpdatePassword />} />
         <Route path="/admin" element={profile?.ruolo === 'admin' ? <AdminDashboard profile={profile} /> : <Navigate to="/" />} />
+        <Route path="/rewards" element={session ? (profile ? (<Rewards profile={profile} refreshProfile={() => fetchProfile(session.user.id)} /> ) : ( <div>Caricamento...</div> )) : (<Navigate to="/login" />)} />
       </Routes>
     </BrowserRouter>
   );

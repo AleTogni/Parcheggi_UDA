@@ -190,7 +190,7 @@ export default function Profile({ profile, refreshProfile }) {
   const prenoFiltrate = prenotazioni.filter(p => activeTab === 'attive' ? p.stato === 'Attiva' : p.stato !== 'Attiva');
 
   return (
-    <div className="max-w-7xl mx-auto p-6 mt-10 relative z-0">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-5 sm:mt-10 relative z-0">
       <div className="flex justify-between items-center mb-8 h-10 border-b border-gray-200 pb-4">
         <div>
           <h1 className="text-3xl font-black text-emerald-900">Area Personale</h1>
@@ -320,7 +320,7 @@ export default function Profile({ profile, refreshProfile }) {
             </div>
           </div>
           
-          <div className="h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="overflow-y-auto max-h-[60vh] sm:h-[500px] pr-2 custom-scrollbar">
             {prenoFiltrate.length === 0 ? (
               <div className="h-full flex items-center justify-center">
                 <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Nessuna prenotazione trovata</p>

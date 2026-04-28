@@ -2,6 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Leaflet z-index fix */
 .leaflet-container {
   z-index: 10 !important;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1fae5;
+  border-radius: 999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6ee7b7;
+}
+
+/* Animazione scale-up per i modal desktop */
+@keyframes scale-up {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-scale-up {
+  animation: scale-up 0.2s ease-out both;
+}
+
+/* Animazione slide-up per i modal su mobile (bottom sheet) */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/* Chat messages display */
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile: prevent body scroll when modal open */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* Safe area insets for notched phones */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Fix Leaflet marker icons */
+.custom-marker,
+.user-marker {
+  background: none !important;
+  border: none !important;
+}
+
+/* Prevent double-tap zoom on mobile buttons */
+button, a {
+  touch-action: manipulation;
+}
+
+/* Animazione fade-in-up per messaggi */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.25s ease-out both;
 }

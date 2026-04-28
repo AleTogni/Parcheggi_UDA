@@ -229,9 +229,9 @@ export default function AdminDashboard({ profile }) {
   });
 
   return (
-    <div className="max-w-7xl mx-auto p-6 mt-6 relative z-0">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-4 sm:mt-6 relative z-0">
       
-      <div className="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 border-b border-gray-200 pb-4">
         <div>
           <h1 className="text-3xl font-black text-emerald-900 tracking-tight">Centro Operativo</h1>
           <p className="text-gray-500 font-medium text-sm mt-1">Pannello Admin • {profile?.nome || 'Admin'}</p>
@@ -422,9 +422,9 @@ export default function AdminDashboard({ profile }) {
         </div>
         
         {/* FIX ALTEZZA: h-[400px] forza un'altezza fissa, evitando che la pagina salti su e giù */}
-        <div className="overflow-y-auto h-[400px] custom-scrollbar px-8 relative">
+        <div className="overflow-x-auto overflow-y-auto h-[400px] custom-scrollbar px-3 sm:px-8 relative">
           {filteredUtenti.length > 0 ? (
-            <table className="w-full text-left border-collapse relative">
+            <table className="w-full min-w-[600px] text-left border-collapse relative">
               <thead className="sticky top-0 bg-white z-10 shadow-sm">
                 <tr className="border-b border-gray-100">
                   <th className="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-white">Utente</th>
@@ -518,40 +518,56 @@ export default function AdminDashboard({ profile }) {
       {/* MODALE REGISTRO PRENOTAZIONI */}
       {showBookingsModal && (
         <div onClick={() => setShowBookingsModal(false)} className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] cursor-pointer">
-          <div onClick={e => e.stopPropagation()} className="bg-white p-8 rounded-3xl max-w-4xl w-full shadow-2xl relative cursor-default flex flex-col max-h-[85vh]">
+          <div onClick={e => e.stopPropagation()} className="bg-white p-4 sm:p-8 rounded-3xl max-w-4xl w-full shadow-2xl relative cursor-default flex flex-col max-h-[90vh]">
             
-            <div className="flex flex-col md:flex-row justify-between items-center border-b border-gray-100 pb-4 mb-6 gap-4">
+            <div className="flex flex-col gap-3 border-b border-gray-100 pb-4 mb-4">
               <h2 className="text-2xl font-black text-gray-900">Registro Prenotazioni</h2>
               
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Focus:</span>
-                  <select 
-                    value={filterParkingId} 
-                    onChange={(e) => setFilterParkingId(e.target.value)}
-                    className="p-1.5 rounded-lg border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:ring-2 focus:ring-emerald-500"
+              {/* CONTENITORE PRINCIPALE: justify-between e items-start (o center) */}
+              <div className="flex flex-row items-center justify-between w-full gap-2 sm:gap-4">
+                
+                {/* GRUPPO DI SINISTRA: Permette il wrap interno dei filtri senza spostare la X */}
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 flex-1">
+                  
+                  {/* Select Focus */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden xs:inline">Focus:</span>
+                    <select 
+                      value={filterParkingId} 
+                      onChange={(e) => setFilterParkingId(e.target.value)}
+                      className="p-1.5 rounded-lg border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:ring-2 focus:ring-emerald-500 max-w-[120px] sm:max-w-none"
+                    >
+                      <option value="all">Tutti</option>
+                      {listaParcheggi.map(park => (
+                        <option key={park.idparcheggio} value={park.idparcheggio}>{park.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Tabs Switch */}
+                  <div className="flex bg-gray-100 p-1 rounded-lg shrink-0">
+                    <button onClick={() => setActiveTab('attive')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'attive' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>In corso</button>
+                    <button onClick={() => setActiveTab('storico')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'storico' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>Storico</button>
+                  </div>
+
+                  {/* Bottone CSV */}
+                  <button 
+                    onClick={handleExportCSV} 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm transition-all shrink-0"
                   >
-                    <option value="all">Tutti i Parcheggi</option>
-                    {listaParcheggi.map(park => (
-                      <option key={park.idparcheggio} value={park.idparcheggio}>{park.nome}</option>
-                    ))}
-                  </select>
+                    esporta CSV
+                  </button>
                 </div>
 
-                <div className="flex bg-gray-100 p-1 rounded-lg">
-                  <button onClick={() => setActiveTab('attive')} className={`px-4 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'attive' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>In corso</button>
-                  <button onClick={() => setActiveTab('storico')} className={`px-4 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'storico' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>Storico</button>
-                </div>
-
+                {/* PULSANTE A DESTRA: shrink-0 impedisce alla X di rimpicciolirsi o spostarsi */}
                 <button 
-                  onClick={handleExportCSV} 
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all"
+                  onClick={() => setShowBookingsModal(false)} 
+                  className="text-3xl font-bold text-gray-300 hover:text-gray-600 transition-colors leading-none p-2 shrink-0"
+                  aria-label="Chiudi"
                 >
-                  Esporta CSV
+                  &times;
                 </button>
               </div>
-
-              <button onClick={() => setShowBookingsModal(false)} className="text-3xl font-bold text-gray-300 hover:text-gray-600 transition-colors">&times;</button>
             </div>
 
             <div className="h-[500px] overflow-y-auto space-y-3 pr-2 custom-scrollbar">
