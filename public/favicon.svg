@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="22" fill="#065f46"/>
+  
+  <path fill-rule="evenodd" clip-rule="evenodd" 
+        d="M32 20 h28 c15 0, 24 9, 24 22 c0 13, -9 22, -24 22 h-12 v20 h-16 V20 z M48 34 v16 h12 c7 0, 10 -4, 10 -8 c0 -4, -3 -8, -10 -8 H48 z" 
+        fill="#ffffff"/>
+  
+  <path d="M68 35 c10 -8, 16 -20, 16 -25 c-12 0, -22 6, -28 15 c0 4, 3 8, 12 10 z" 
+        fill="#6ee7b7"/>
+</svg>

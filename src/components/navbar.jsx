@@ -21,14 +21,18 @@ export default function Navbar({ session, profile }) {
         <div className="hidden sm:flex items-center gap-3">
           {session ? (
             <>
+              {/* Spostato qui il pulsante dei punti eco per farlo apparire a sinistra */}
+              <Link to="/rewards" className="flex items-center gap-1 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-black">
+                🍃 {profile?.punti_accumulati || 0}
+              </Link>
+              
+              {/* Il pulsante Area Admin ora è a destra dei punti */}
               {isAdmin && (
                 <Link to="/admin" className="flex items-center justify-center h-10 bg-emerald-800 hover:bg-emerald-700 text-emerald-50 font-bold px-4 rounded-full text-sm transition-all shadow-sm border border-emerald-700">
                   Area Admin
                 </Link>
               )}
-              <Link to="/rewards" className="flex items-center gap-1 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-black">
-                🍃 {profile?.punti_accumulati || 0}
-              </Link>
+              
               <Link
                 to="/profile"
                 className="flex items-center h-10 gap-2 bg-emerald-800 hover:bg-emerald-700 p-1 pr-4 rounded-full transition-all border border-emerald-700 shadow-sm"
@@ -55,9 +59,9 @@ export default function Navbar({ session, profile }) {
         {/* MOBILE: avatar + hamburger */}
         <div className="flex sm:hidden items-center gap-2">
           {session && (
-                          <Link to="/rewards" className="flex items-center gap-1 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-black">
-                🍃 {profile?.punti_accumulati || 0}
-              </Link>
+            <Link to="/rewards" className="flex items-center gap-1 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-black">
+              🍃 {profile?.punti_accumulati || 0}
+            </Link>
           )}
           <button
             onClick={() => setMenuOpen(prev => !prev)}

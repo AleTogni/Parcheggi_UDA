@@ -359,7 +359,7 @@ export default function Home({ profile }) {
             </div>
           </div>
 
-          <div className="overflow-y-auto px-1 py-1 flex flex-col gap-3 custom-scrollbar flex-1">
+          <div className="overflow-y-auto px-3 py-2 flex flex-col gap-3 custom-scrollbar flex-1">
             {filteredParkings.length === 0 && (
               <div className="flex items-center justify-center h-32 text-gray-400 text-sm font-bold">
                 Nessun parcheggio trovato
@@ -372,16 +372,16 @@ export default function Home({ profile }) {
                   key={p.idparcheggio}
                   onClick={() => {
                     setModalData(p);
-                    // Su mobile, quando l'utente clicca dalla lista torna alla mappa
+
                     if (window.innerWidth < 1024) setMobileView('mappa');
                   }}
                   onMouseEnter={() => setHoveredParkingId(p.idparcheggio)}
                   onMouseLeave={() => setHoveredParkingId(null)}
-                  className={`shrink-0 p-4 rounded-2xl border-2 cursor-pointer relative overflow-hidden group ${p.color} ${isHovered ? 'ring-4 ring-emerald-400 scale-[1.02] shadow-xl z-10 transition-all duration-300' : 'hover:shadow-md transition-all duration-300'}`}
+                  className={`shrink-0 p-4 rounded-2xl border-2 cursor-pointer relative overflow-hidden group ${p.color} ${isHovered ? 'ring-4 ring-emerald-400/50 scale-[1.01] bg-emerald-100 shadow-lg z-10 transition-all duration-300' : 'shadow-sm hover:shadow-md transition-all duration-300'}`}
                 >
                   <div className="relative z-10 flex justify-between items-center">
                     <div>
-                      <h3 className="font-black text-base sm:text-lg mb-1 group-hover:text-emerald-700 transition-colors">{p.nome}</h3>
+                      <h3 className="font-black text-base sm:text-lg mb-1 group-hover:text-emerald-800 transition-colors">{p.nome}</h3>
                       <p className="text-xl sm:text-2xl font-black">
                         {p.liberi} <span className="text-[10px] font-bold opacity-60 uppercase tracking-widest">/ {p.postitot} liberi</span>
                       </p>

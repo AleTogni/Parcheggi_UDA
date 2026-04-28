@@ -6,10 +6,37 @@ export const CALCOLO_PUNTI = {
 };
 
 export const LISTA_PREMI = [
-  { id: 1, soglia: 200, titolo: "Green", desc: "Adotta un albero o finanzia un progetto di riforestazione locale a tuo nome.", categoria: "Ambiente" },
-  { id: 2, soglia: 500, titolo: "Cultura", desc: "Sconto speciale sul biglietto di un museo o mostra situata vicino al parcheggio.", categoria: "Cultura" },
-  { id: 3, soglia: 1000, titolo: "Avventure", desc: "Partecipazione a trekking guidati o escursioni in riserve naturali protette.", categoria: "Natura" },
-  { id: 4, soglia: 1500, titolo: "Mobilità", desc: "Voucher per l'utilizzo gratuito di bici o monopattini elettrici in città.", categoria: "Mobilità" },
+  { 
+    id: 1, 
+    soglia: 200, 
+    titolo: "Green", 
+    desc: "Adotta un albero o finanzia un progetto di riforestazione locale a tuo nome.", 
+    categoria: "Ambiente",
+    immagine: "/img/albero.jpg"
+  },
+  { 
+    id: 2, 
+    soglia: 500, 
+    titolo: "Cultura", 
+    desc: "Sconto speciale sul biglietto di un museo o mostra situata vicino al parcheggio.", 
+    categoria: "Cultura",
+    immagine: "/img/museo.jpg"
+  },
+  { 
+    id: 3, 
+    soglia: 1000, 
+    titolo: "Avventure", 
+    desc: "Partecipazione a trekking guidati o escursioni in riserve naturali protette.", 
+    categoria: "Natura",
+    immagine: "/img/trekking.jpg"
+  },
+  { id: 4, 
+    soglia: 1500, 
+    titolo: "Mobilità", 
+    desc: "Voucher per l'utilizzo gratuito di bici o monopattini elettrici in città.", 
+    categoria: "Mobilità",
+    immagine: "/img/mobilità.jpg"
+  },
 ];
 
 export const calcolaPuntiSosta = (inizio, fine, tipoAlimentazione) => {
