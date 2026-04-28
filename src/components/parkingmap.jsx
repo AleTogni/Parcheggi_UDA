@@ -2,17 +2,48 @@ import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Polygon, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-routing-machine'; 
+import 'leaflet-routing-machine/dist/leaflet-routing-machine.css'; 
 
 // COMPONENTE PER RISOLVERE IL CARICAMENTO A METÀ
 function MapResizer({ trigger }) {
   const map = useMap();
   useEffect(() => {
-    // Forza il ricalcolo delle dimensioni dopo un breve delay per permettere al layout CSS di stabilizzarsi
     const timer = setTimeout(() => {
       map.invalidateSize();
     }, 250);
     return () => clearTimeout(timer);
-  }, [map, trigger]); // Si attiva al montaggio e se i parcheggi cambiano
+  }, [map, trigger]);
+  return null;
+}
+
+// COMPONENTE PER IL CALCOLO DEL PERCORSO (ROUTING)
+function Routing({ userLoc, selectedParking }) {
+  const map = useMap();
+
+  useEffect(() => {
+    // Se manca la posizione utente o nessun parcheggio è selezionato, non fare nulla
+    if (!userLoc || !selectedParking) return;
+
+    const routingControl = L.Routing.control({
+      waypoints: [
+        L.latLng(userLoc.lat, userLoc.lng),
+        L.latLng(selectedParking.latitudine, selectedParking.longitudine)
+      ],
+      lineOptions: {
+        styles: [{ color: '#059669', weight: 5, opacity: 0.8 }] // Linea Verde Smeraldo
+      },
+      show: false, // Nasconde il pannellino laterale
+      addWaypoints: false,
+      routeWhileDragging: false,
+      fitSelectedRoutes: true, // Zooma in automatico per mostrare tutto il percorso
+      createMarker: () => null // Non crea pin duplicati
+    }).addTo(map);
+
+    // Pulizia: quando l'utente chiude il popup, rimuove la linea dalla mappa
+    return () => map.removeControl(routingControl);
+  }, [userLoc, selectedParking, map]);
+
   return null;
 }
 
@@ -34,7 +65,7 @@ const createCustomIcon = (colorClass, isHovered) => {
 
 const userIcon = L.divIcon({
   className: 'user-marker',
-  html: `<div class=\"w-5 h-5 bg-blue-500 rounded-full border-2 border-white shadow-[0_0_15px_rgba(59,130,246,0.6)] animate-pulse\"></div>`,
+  html: `<div class="w-5 h-5 bg-blue-500 rounded-full border-2 border-white shadow-[0_0_15px_rgba(59,130,246,0.6)] animate-pulse"></div>`,
   iconSize: [20, 20],
   iconAnchor: [10, 10]
 });
@@ -70,7 +101,8 @@ function LocationControl({ setUserLoc }) {
   );
 }
 
-export default function ParkingMap({ parkings, onMarkerClick, userLoc, setUserLoc, hoveredParkingId, setHoveredParkingId }) {
+// QUI È DOVE MANCAVA LA VARIABILE! Ora selectedParking è presente tra le parentesi
+export default function ParkingMap({ parkings, onMarkerClick, userLoc, setUserLoc, hoveredParkingId, setHoveredParkingId, selectedParking }) {
   const bresciaCoords = [45.5415, 10.2245];
   const ztlCoords = [[45.5435, 10.2150], [45.5445, 10.2260], [45.5360, 10.2280], [45.5350, 10.2180]];
 
@@ -79,8 +111,10 @@ export default function ParkingMap({ parkings, onMarkerClick, userLoc, setUserLo
       <MapContainer center={bresciaCoords} zoom={14} style={{ height: '100%', width: '100%' }}>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         
-        {/* Componente di fix per il caricamento */}
         <MapResizer trigger={parkings.length} />
+
+        {/* IL NUOVO COMPONENTE INSERITO */}
+        <Routing userLoc={userLoc} selectedParking={selectedParking} />
 
         <Polygon positions={ztlCoords} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.15, weight: 2, dashArray: '5, 5' }}>
           <Tooltip sticky className="font-bold text-red-700">Zona a Traffico Limitato (ZTL)</Tooltip>

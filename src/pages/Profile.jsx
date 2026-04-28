@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../api/supabaseClient';
 import { QRCodeSVG } from 'qrcode.react';
+import { useNavigate } from 'react-router-dom';
 
-export default function Profile({ profile, refreshProfile }) {
+export default function Profile({ profile, refreshProfile, setDestinationParking }) {
+  const navigate = useNavigate();
   const [form, setForm] = useState({ 
     nome: '', 
     cognome: '', 
@@ -58,14 +60,14 @@ export default function Profile({ profile, refreshProfile }) {
     setVeicoli(data || []);
   }
 
-  async function loadPrenotazioni() {
-    const { data } = await supabase
-      .from('prenotazione')
-      .select('*, posto_auto(piano, parcheggio(nome))')
-      .eq('idpersona', profile.idpersona)
-      .order('orarioinizio', { ascending: false });
-    setPrenotazioni(data || []);
-  }
+async function loadPrenotazioni() {
+  const { data } = await supabase
+    .from('prenotazione')
+    .select('*, posto_auto(piano, parcheggio(nome, latitudine, longitudine))') // Aggiunte coordinate
+    .eq('idpersona', profile.idpersona)
+    .order('orarioinizio', { ascending: false });
+  setPrenotazioni(data || []);
+}
 
   const showMessage = (msg) => {
     setUiMessage(msg);
@@ -142,6 +144,7 @@ export default function Profile({ profile, refreshProfile }) {
   const executeCancelBooking = async (pren) => {
     await supabase.from('prenotazione').update({ stato: 'Annullata' }).eq('idprenotazione', pren.idprenotazione);
     await supabase.from('posto_auto').update({ stato: 'Libero' }).eq('idposto', pren.idposto);
+    if (setDestinationParking) setDestinationParking(null);
     loadPrenotazioni();
     showMessage("Sosta annullata.");
   };
@@ -365,11 +368,40 @@ export default function Profile({ profile, refreshProfile }) {
                       )}
                     </div>
 
-                    {/* Bottoni in basso */}
+{/* Bottoni in basso */}
                     {p.stato === 'Attiva' && (
-                      <div className="flex gap-2 mt-auto pt-3 border-t border-gray-100">
-                        <button onClick={() => handleProlungaSosta(p)} className="flex-1 py-2.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm">Prolunga +1h</button>
-                        <button onClick={() => executeCancelBooking(p)} className="flex-1 py-2.5 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 hover:border-red-300 transition-all">Annulla Sosta</button>
+                      <div className="flex gap-2 mt-auto pt-4 border-t border-gray-100">
+                        {/* PULSANTE GUIDA */}
+                        <button 
+                          onClick={() => {
+                            const park = {
+                              nome: p.posto_auto.parcheggio.nome,
+                              latitudine: p.posto_auto.parcheggio.latitudine,
+                              longitudine: p.posto_auto.parcheggio.longitudine
+                            };
+                            setDestinationParking(park);
+                            navigate('/');
+                          }}
+                          className="flex-1 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-[10px] sm:text-xs font-black tracking-wider hover:bg-blue-100 transition-all shadow-sm"
+                        >
+                          Guida
+                        </button>
+                        
+                        {/* PULSANTE PROLUNGA */}
+                        <button 
+                          onClick={() => handleProlungaSosta(p)} 
+                          className="flex-1 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[10px] sm:text-xs font-black tracking-wider hover:bg-emerald-100 transition-all shadow-sm"
+                        >
+                          +1 Ora
+                        </button>
+                        
+                        {/* PULSANTE ANNULLA */}
+                        <button 
+                          onClick={() => executeCancelBooking(p)} 
+                          className="flex-1 py-2.5 bg-red-50 text-red-700 border border-red-200 rounded-xl text-[10px] sm:text-xs font-black tracking-wider hover:bg-red-100 transition-all shadow-sm"
+                        >
+                          Annulla
+                        </button>
                       </div>
                     )}
                   </div>

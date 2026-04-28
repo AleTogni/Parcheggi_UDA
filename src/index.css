@@ -81,3 +81,7 @@ button, a {
 .animate-fade-in-up {
   animation: fade-in-up 0.25s ease-out both;
 }
+
+.leaflet-routing-container {
+  display: none !important;
+}

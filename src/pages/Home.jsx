@@ -4,12 +4,11 @@ import ParkingMap from '../components/parkingmap';
 import { calcolaPuntiSosta } from '../utils/gamification';
 
 
-export default function Home({ profile }) {
+export default function Home({ profile, destinationParking, setDestinationParking, userLoc, setUserLoc }) {
   const [parkings, setParkings] = useState([]);
   const [userVehicles, setUserVehicles] = useState([]);
   const [modalData, setModalData] = useState(null);
   const [bookingSpot, setBookingSpot] = useState(null);
-  const [userLoc, setUserLoc] = useState(null);
   const [hoveredParkingId, setHoveredParkingId] = useState(null);
   const [cityStats, setCityStats] = useState({ freeSpots: 0, evSpots: 0, activeSoste: 0 });
 
@@ -29,6 +28,7 @@ export default function Home({ profile }) {
   const [uiMessage, setUiMessage] = useState({ text: '', type: '' });
   const [showGpsError, setShowGpsError] = useState(false);
 
+ 
   // Stato per il popup dell'assistente virtuale
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
@@ -198,6 +198,7 @@ export default function Home({ profile }) {
 
     if (!pError) {
       setUiMessage({ text: `Prenotazione confermata! Hai guadagnato ${puntiGuadagnati} EcoPoints!`, type: 'success' });
+      setDestinationParking(modalData);
     }
     setTimeout(() => { closeModal(); loadData(); }, 2000);
   };
@@ -342,7 +343,25 @@ export default function Home({ profile }) {
             setUserLoc={setUserLoc}
             hoveredParkingId={hoveredParkingId}
             setHoveredParkingId={setHoveredParkingId}
+            selectedParking={destinationParking} 
           />
+          
+          {/* <--- 2. AGGIUNTO IL BANNER FLUTTUANTE ---> */}
+          {destinationParking && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] bg-emerald-900 text-white px-5 py-3 rounded-[2rem] shadow-2xl flex items-center gap-4 animate-fade-in-down border-2 border-emerald-700 backdrop-blur-md">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">Navigazione verso</span>
+                <span className="font-bold text-sm">{destinationParking.nome}</span>
+              </div>
+              <button 
+                onClick={() => setDestinationParking(null)} 
+                className="bg-white/20 hover:bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold transition-colors shadow-sm"
+                aria-label="Interrompi navigazione"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
 
         {/* LISTA PARCHEGGI */}
