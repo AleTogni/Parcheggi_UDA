@@ -13,6 +13,10 @@ import UpdatePassword from './pages/UpdatePassword';
 export default function App() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
+  
+  // --- NUOVO STATO GLOBALE PER LA NAVIGAZIONE GPS ---
+  const [destinationParking, setDestinationParking] = useState(null);
+  const [userLoc, setUserLoc] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -59,13 +63,10 @@ export default function App() {
       .maybeSingle();
 
     if (data) {
-      // Se trova i dati, li imposta
       setProfile(data);
     } else if (retries > 0) {
-      // Se NON trova i dati (es. appena registrato), aspetta 500ms e riprova!
       setTimeout(() => fetchProfile(uuid, retries - 1), 500);
     } else {
-      // Se dopo 4 tentativi (2 secondi) non c'è ancora nulla, si arrende
       setProfile(null);
     }
   }
@@ -74,10 +75,32 @@ export default function App() {
     <BrowserRouter>
       <Navbar session={session} profile={profile} />
       <Routes>
-        <Route path="/" element={session ? <Home profile={profile} /> : <Navigate to="/login" />} />
+        {/* Passiamo lo stato e la funzione alla Home */}
+        <Route path="/" element={
+          session ? (
+            <Home 
+              profile={profile} 
+              destinationParking={destinationParking} 
+              setDestinationParking={setDestinationParking} 
+              userLoc={userLoc}      
+              setUserLoc={setUserLoc}
+            />
+          ) : <Navigate to="/login" />
+        } />
+        
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
         <Route path="/register" element={!session ? <Register /> : <Navigate to="/" />} />
-        <Route path="/profile" element={session ? <Profile profile={profile} /> : <Navigate to="/login" />} />
+        
+        {/* Passiamo solo la funzione di settaggio al Profile */}
+        <Route path="/profile" element={
+          session ? (
+            <Profile 
+              profile={profile} 
+              setDestinationParking={setDestinationParking} 
+            />
+          ) : <Navigate to="/login" />
+        } />
+        
         <Route path="/update-password" element={<UpdatePassword />} />
         <Route path="/admin" element={profile?.ruolo === 'admin' ? <AdminDashboard profile={profile} /> : <Navigate to="/" />} />
         <Route path="/rewards" element={session ? (profile ? (<Rewards profile={profile} refreshProfile={() => fetchProfile(session.user.id)} /> ) : ( <div>Caricamento...</div> )) : (<Navigate to="/login" />)} />
