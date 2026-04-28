@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../api/supabaseClient';
 import ParkingMap from '../components/parkingmap';
 import { calcolaPuntiSosta } from '../utils/gamification';
-
+import Flatpickr from "react-flatpickr";
+import "flatpickr/dist/themes/material_green.css"; 
+import { Italian } from "flatpickr/dist/l10n/it.js";
 
 const RenderStars = ({ rating }) => {
   return (
@@ -562,14 +564,88 @@ const closeModal = () => {
                           <input type="text" placeholder="Es. AA123BB" value={nuovaTarga} onChange={(e) => setNuovaTarga(e.target.value.toUpperCase())} className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black uppercase outline-none focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm" />
                         </div>
                       )}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* ARRIVO */}
+                        <div className="space-y-1">
                           <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest">Arrivo</label>
-                          <input type="datetime-local" min={nowStr} value={bookingStart} onChange={(e) => setBookingStart(e.target.value)} className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all" />
+                          <div className="flex gap-2">
+                            {/* DATA */}
+                            <div className="flex-1">
+                              <Flatpickr
+                                value={bookingStart ? bookingStart.split('T')[0] : ''}
+                                onChange={([date]) => {
+                                  if (!date) return setBookingStart('');
+                                  const d = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                                  const t = bookingStart ? bookingStart.split('T')[1].substring(0,5) : '10:00';
+                                  setBookingStart(`${d}T${t}`);
+                                }}
+                                options={{ 
+                                  locale: Italian, 
+                                  minDate: "today", 
+                                  dateFormat: "Y-m-d", // Formato per il computer (Nessun bug)
+                                  altInput: true,      // Crea un input finto per l'utente
+                                  altFormat: "d/m/Y"   // Formato bello per l'utente
+                                }}
+                                className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all"
+                                placeholder="Data Arrivo"
+                              />
+                            </div>
+                            {/* ORA (Nativa, veloce, digitabile) */}
+                            <div className="w-[110px] shrink-0">
+                              <input
+                                type="time"
+                                value={bookingStart ? bookingStart.split('T')[1].substring(0, 5) : ''}
+                                onChange={(e) => {
+                                  const d = bookingStart ? bookingStart.split('T')[0] : new Date().toISOString().split('T')[0];
+                                  const t = e.target.value || '10:00';
+                                  setBookingStart(`${d}T${t}`);
+                                }}
+                                className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all text-center"
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <div>
+
+                        {/* USCITA */}
+                        <div className="space-y-1">
                           <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest">Uscita</label>
-                          <input type="datetime-local" min={bookingStart || nowStr} value={bookingEnd} onChange={(e) => setBookingEnd(e.target.value)} className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all" />
+                          <div className="flex gap-2">
+                            {/* DATA */}
+                            <div className="flex-1">
+                              <Flatpickr
+                                value={bookingEnd ? bookingEnd.split('T')[0] : ''}
+                                onChange={([date]) => {
+                                  if (!date) return setBookingEnd('');
+                                  const d = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                                  const t = bookingEnd ? bookingEnd.split('T')[1].substring(0,5) : '12:00';
+                                  setBookingEnd(`${d}T${t}`);
+                                }}
+                                options={{ 
+                                  locale: Italian, 
+                                  minDate: bookingStart ? bookingStart.split('T')[0] : "today", 
+                                  dateFormat: "Y-m-d", 
+                                  altInput: true, 
+                                  altFormat: "d/m/Y" 
+                                }}
+                                className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all"
+                                placeholder="Data Uscita"
+                              />
+                            </div>
+                            {/* ORA (Nativa, veloce, digitabile) */}
+                            <div className="w-[110px] shrink-0">
+                              <input
+                                type="time"
+                                value={bookingEnd ? bookingEnd.split('T')[1].substring(0, 5) : ''}
+                                onChange={(e) => {
+                                  const d = bookingEnd ? bookingEnd.split('T')[0] : (bookingStart ? bookingStart.split('T')[0] : new Date().toISOString().split('T')[0]);
+                                  const t = e.target.value || '12:00';
+                                  setBookingEnd(`${d}T${t}`);
+                                }}
+                                className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all text-center"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
 
