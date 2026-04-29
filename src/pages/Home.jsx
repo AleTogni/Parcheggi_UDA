@@ -494,7 +494,7 @@ const closeModal = () => {
             {/* BIVIO: MOSTRA RECENSIONI OPPURE MOSTRA PRENOTAZIONE */}
             {showReviews ? (
               /* VISTA 1: LISTA RECENSIONI */
-              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar animate-fade-in-up pb-4 border-t border-gray-100 pt-4">
+              <div className="space-y-3 h-[300px] sm:h-[400px] overflow-y-auto pr-2 custom-scrollbar animate-fade-in-up pb-4 border-t border-gray-100 pt-4">
                 {modalData.listaRecensioni?.length === 0 ? (
                   <p className="text-center text-gray-400 py-10 font-bold uppercase text-xs tracking-widest">Nessuna recensione per ora</p>
                 ) : (
