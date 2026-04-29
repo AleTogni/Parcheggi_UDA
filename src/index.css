@@ -85,3 +85,140 @@ button, a {
 .leaflet-routing-container {
   display: none !important;
 }
+
+/* ============================================================
+   TEMA SCURO — Dark Mode completo
+   Applicato quando <html class="dark"> è presente.
+   Verde emerald invariato. Bianchi → gray-800. Grigi → scuri.
+   ============================================================ */
+
+/* ── Base ── */
+.dark body {
+  background-color: #111827;
+  color: #f9fafb;
+}
+
+/* ── Superfici bianche (card, modali, pannelli) ── */
+.dark .bg-white {
+  background-color: #1f2937 !important;
+  color: #f9fafb;
+}
+
+/* ── Sfondi grigi chiari → gradazioni scure ── */
+.dark .bg-gray-50  { background-color: #111827 !important; }
+.dark .bg-gray-100 { background-color: #1f2937 !important; }
+.dark .bg-gray-200 { background-color: #374151 !important; }
+
+/* ── Testi grigi ── */
+.dark .text-gray-300 { color: #6b7280 !important; }
+.dark .text-gray-400 { color: #6b7280 !important; }
+.dark .text-gray-500 { color: #9ca3af !important; }
+.dark .text-gray-600 { color: #9ca3af !important; }
+.dark .text-gray-700 { color: #d1d5db !important; }
+.dark .text-gray-800 { color: #e5e7eb !important; }
+.dark .text-gray-900 { color: #f9fafb !important; }
+
+/* ── Bordi grigi ── */
+.dark .border-gray-100 { border-color: #374151 !important; }
+.dark .border-gray-200 { border-color: #374151 !important; }
+.dark .border-gray-300 { border-color: #4b5563 !important; }
+
+/* ── Input, textarea, select ── */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #f9fafb !important;
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #6b7280 !important;
+}
+/* focus: mantieni il ring verde */
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  background-color: #1f2937 !important;
+}
+
+/* ── Badge / pill colorati (sfondo chiaro → scuro mantenendo il colore) ── */
+
+/* Azzurro/blue */
+.dark .bg-blue-50   { background-color: #1e3a5f !important; }
+.dark .text-blue-700{ color: #93c5fd !important; }
+.dark .text-blue-800{ color: #93c5fd !important; }
+.dark .text-blue-900{ color: #bfdbfe !important; }
+.dark .border-blue-200 { border-color: #1d4ed8 !important; }
+
+/* Giallo/yellow */
+.dark .bg-yellow-50   { background-color: #422006 !important; }
+.dark .text-yellow-700{ color: #fde68a !important; }
+.dark .border-yellow-200 { border-color: #92400e !important; }
+
+/* Rosso/red – zona pericolo e bottoni annulla */
+.dark .bg-red-50   { background-color: #3b0a0a !important; }
+.dark .text-red-600 { color: #fca5a5 !important; }
+.dark .text-red-700 { color: #fca5a5 !important; }
+.dark .text-red-900 { color: #fecaca !important; }
+.dark .border-red-100 { border-color: #7f1d1d !important; }
+.dark .border-red-200 { border-color: #7f1d1d !important; }
+
+/* Verde/emerald chiari (badge, sezioni) */
+.dark .bg-emerald-50  { background-color: #052e16 !important; }
+.dark .bg-emerald-100 { background-color: #064e3b !important; }
+.dark .text-emerald-900 { color: #6ee7b7 !important; }
+.dark .border-emerald-100 { border-color: #065f46 !important; }
+.dark .border-emerald-200 { border-color: #065f46 !important; }
+
+/* ── Bottoni chiari (grigio chiaro) ── */
+.dark .bg-gray-100.hover\:bg-gray-200,
+.dark .bg-gray-100 {
+  background-color: #374151 !important;
+  color: #d1d5db !important;
+}
+.dark .text-gray-500.hover\:text-gray-800 { color: #9ca3af !important; }
+
+/* ── Tab switcher (In corso / Storico, Mappa / Lista) ── */
+/* Il tab attivo bg-white già gestito sopra; il tab inattivo */
+.dark .bg-gray-100.p-1 { background-color: #374151 !important; }
+
+/* ── Sezione "posto assegnato" (bg-emerald-50 con bordo) ── */
+/* già coperto da .dark .bg-emerald-50 sopra */
+
+/* ── Badge icone stats (bg-blue-100, bg-purple-100) ── */
+.dark .bg-blue-100   { background-color: #1e3a5f !important; }
+.dark .text-blue-600 { color: #93c5fd !important; }
+.dark .bg-purple-100 { background-color: #2e1065 !important; }
+.dark .text-purple-600 { color: #c4b5fd !important; }
+
+/* ── Badge punti navbar (bg-emerald-100 text-emerald-800) ── */
+.dark .bg-emerald-100 { background-color: #a2e6ca !important; }
+.dark .text-emerald-800 { color: #064e3b !important; }
+
+/* ── Mappa Leaflet: filtro per adattarla al dark ── */
+.dark .leaflet-container {
+  filter: brightness(0.75) saturate(0.9) hue-rotate(5deg) !important;
+}
+
+/* ── Modal overlay ── */
+.dark .bg-gray-900\/60 { background-color: rgba(0,0,0,0.75) !important; }
+
+/* ── Zona rossa elimina account ── */
+/* bg-red-50, text-red-700, text-red-900 già coperti sopra */
+
+/* ── Scrollbar dark ── */
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #065f46;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #047857;
+}
+
+/* ── Transizione morbida globale cambio tema ── */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+}

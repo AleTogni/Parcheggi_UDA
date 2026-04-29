@@ -431,12 +431,11 @@ const closeModal = () => {
                   key={p.idparcheggio}
                   onClick={() => {
                     setModalData(p);
-
                     if (window.innerWidth < 1024) setMobileView('mappa');
                   }}
                   onMouseEnter={() => setHoveredParkingId(p.idparcheggio)}
                   onMouseLeave={() => setHoveredParkingId(null)}
-                  className={`shrink-0 p-4 rounded-2xl border-2 cursor-pointer relative overflow-hidden group ${p.color} ${isHovered ? 'ring-4 ring-emerald-400/50 scale-[1.01] bg-emerald-100 shadow-lg z-10 transition-all duration-300' : 'shadow-sm hover:shadow-md transition-all duration-300'}`}
+                  className={`shrink-0 p-4 rounded-2xl border-2 cursor-pointer relative overflow-hidden group ${p.color} ${isHovered ? (typeof window !== 'undefined' && window.document.documentElement.classList.contains('dark') ? 'ring-4 ring-emerald-400/50 scale-[1.01] shadow-lg z-10 transition-all duration-300' : 'ring-4 ring-emerald-400/50 scale-[1.01] bg-emerald-100 shadow-lg z-10 transition-all duration-300') : 'shadow-sm hover:shadow-md transition-all duration-300'}`}
                 >
                   <div className="relative z-10 flex justify-between items-center">
                     <div>
