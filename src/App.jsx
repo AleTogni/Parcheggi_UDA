@@ -15,7 +15,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   
-  // --- STATO PER IL CARICAMENTO INIZIALE (Risolve il bug di Google) ---
+  // --- STATO PER IL CARICAMENTO INIZIALE ---
   const [isLoading, setIsLoading] = useState(true);
   
   // --- NUOVO STATO GLOBALE PER LA NAVIGAZIONE GPS ---
@@ -26,10 +26,10 @@ export default function App() {
     // Controllo iniziale della sessione
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      // SBLOCCA L'APP IMMEDIATAMENTE (Non aspetta il profilo!)
+      setIsLoading(false); 
       if (session) {
         fetchProfile(session.user.id);
-      } else {
-        setIsLoading(false); // Se non c'è sessione, smetti di caricare subito
       }
     });
 
@@ -79,23 +79,18 @@ export default function App() {
 
     if (data) {
       setProfile(data);
-      setIsLoading(false); // Profilo caricato, possiamo mostrare l'app
     } else if (retries > 0) {
       setTimeout(() => fetchProfile(uuid, retries - 1), 500);
     } else {
       setProfile(null);
-      setIsLoading(false); // Fallimento dopo i tentativi, sblocca l'app
     }
   }
 
-  // --- BLOCCO DI SICUREZZA ---
-  // Finché Supabase non ha finito di leggere i dati (es. da Google), mostriamo un caricamento
-  // Questo impedisce al router di sbatterti fuori prematuramente verso il /login
+  // --- BLOCCO DI SICUREZZA PER SESSIONE ---
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-emerald-900 text-white font-bold text-xl">
         <div className="flex flex-col items-center gap-4">
-           {/* Piccola animazione di caricamento */}
           <div className="w-8 h-8 border-4 border-emerald-500 border-t-white rounded-full animate-spin"></div>
           Caricamento sessione...
         </div>
@@ -108,7 +103,6 @@ export default function App() {
     <BrowserRouter>
       <Navbar session={session} profile={profile} />
       <Routes>
-        {/* Passiamo lo stato e la funzione alla Home */}
         <Route path="/" element={
           session ? (
             <Home 
@@ -124,7 +118,6 @@ export default function App() {
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
         <Route path="/register" element={!session ? <Register /> : <Navigate to="/" />} />
         
-        {/* Passiamo solo la funzione di settaggio al Profile */}
         <Route path="/profile" element={
           session ? (
             <Profile 
@@ -135,8 +128,23 @@ export default function App() {
         } />
         
         <Route path="/update-password" element={<UpdatePassword />} />
-        <Route path="/admin" element={profile?.ruolo === 'admin' ? <AdminDashboard profile={profile} /> : <Navigate to="/" />} />
-        <Route path="/rewards" element={session ? (profile ? (<Rewards profile={profile} refreshProfile={() => fetchProfile(session.user.id)} /> ) : ( <div>Caricamento profilo...</div> )) : (<Navigate to="/login" />)} />
+
+        {/* ROTTA ADMIN: Ora aspetta in modo sicuro il profilo prima di giudicare i permessi */}
+        <Route path="/admin" element={
+          session ? (
+            profile ? (
+              profile.ruolo === 'admin' ? <AdminDashboard profile={profile} /> : <Navigate to="/" />
+            ) : (
+              <div className="flex h-screen items-center justify-center text-emerald-800 font-bold animate-pulse text-lg">
+                Verifica permessi in corso...
+              </div>
+            )
+          ) : <Navigate to="/login" />
+        } />
+
+        {/* ROTTA REWARDS: Libera, permettendo al componente di mostrare lo skeleton */}
+        <Route path="/rewards" element={session ? <Rewards profile={profile} refreshProfile={() => fetchProfile(session.user.id)} /> : <Navigate to="/login" />} />
+        
       </Routes>
     </BrowserRouter>
     </ThemeProvider>

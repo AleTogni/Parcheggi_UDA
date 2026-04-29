@@ -11,6 +11,7 @@ export default function AdminDashboard({ profile }) {
   const [newParking, setNewParking] = useState({ nome: '', postitot: 100, coperto: true, latitudine: 45.54, longitudine: 10.22 });
   const [newSpot, setNewSpot] = useState({ idparcheggio: '', piano: '', tipoposto: 'Standard' });
   const [uiMessage, setUiMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   const [showBookingsModal, setShowBookingsModal] = useState(false);
   const [activeTab, setActiveTab] = useState('attive'); 
@@ -45,6 +46,7 @@ export default function AdminDashboard({ profile }) {
     
     if (utentiData) setListaUtenti(utentiData);
     if (p && p.length > 0 && !newSpot.idparcheggio) setNewSpot(prev => ({ ...prev, idparcheggio: p[0].idparcheggio }));
+    setIsLoading(false);
   };
 
   const processDataForChart = (data, view) => {
@@ -239,30 +241,44 @@ export default function AdminDashboard({ profile }) {
         {uiMessage && <div className="bg-gray-800 text-white px-5 py-2 rounded-lg font-bold shadow-md animate-pulse text-xs">{uiMessage}</div>}
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Utenti</p>
-          <p className="text-3xl font-black text-gray-800">{stats.utenti}</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Impianti</p>
-          <p className="text-3xl font-black text-emerald-700">{stats.parcheggi}</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Posti</p>
-          <p className="text-3xl font-black text-blue-700">{stats.posti}</p>
-        </div>
-        
-        <div 
-          onClick={handleOpenBookings}
-          className="bg-emerald-50 p-6 rounded-2xl border border-emerald-200 shadow-sm hover:bg-emerald-100 hover:border-emerald-300 transition-all cursor-pointer group"
-        >
-          <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest mb-1">Soste Attive</p>
-          <div className="flex justify-between items-end">
-            <p className="text-3xl font-black text-emerald-900">{stats.attive}</p>
-            <span className="text-[10px] font-bold text-emerald-600 border border-emerald-200 px-2 py-1 rounded bg-white group-hover:border-emerald-400 transition-colors">GESTISCI</span>
-          </div>
-        </div>
+<div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {isLoading ? (
+          /* SKELETON CARDS */
+          <>
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm animate-pulse">
+                <div className="h-3 bg-gray-200 rounded-md w-1/2 mb-4"></div>
+                <div className="h-8 bg-gray-200 rounded-md w-1/4"></div>
+              </div>
+            ))}
+          </>
+        ) : (
+          /* LE TUE VERE CARDS */
+          <>
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Utenti</p>
+              <p className="text-3xl font-black text-gray-800">{stats.utenti}</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Impianti</p>
+              <p className="text-3xl font-black text-emerald-700">{stats.parcheggi}</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Posti</p>
+              <p className="text-3xl font-black text-blue-700">{stats.posti}</p>
+            </div>
+            <div 
+              onClick={handleOpenBookings}
+              className="bg-emerald-50 p-6 rounded-2xl border border-emerald-200 shadow-sm hover:bg-emerald-100 hover:border-emerald-300 transition-all cursor-pointer group"
+            >
+              <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest mb-1">Soste Attive</p>
+              <div className="flex justify-between items-end">
+                <p className="text-3xl font-black text-emerald-900">{stats.attive}</p>
+                <span className="text-[10px] font-bold text-emerald-600 border border-emerald-200 px-2 py-1 rounded bg-white group-hover:border-emerald-400 transition-colors">GESTISCI</span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

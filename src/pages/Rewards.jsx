@@ -8,11 +8,31 @@ export default function Rewards({ profile, refreshProfile }) {
   const [quantity, setQuantity] = useState(1);
   const [toast, setToast] = useState(null);
 
+  // --- SKELETON LOADING ---
   if (!profile) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
-        <p className="ml-3 font-bold text-emerald-800">Caricamento profilo...</p>
+      <div className="p-6 max-w-4xl mx-auto pb-24 animate-pulse">
+        {/* SKELETON HEADER */}
+        <div className="bg-gray-200 dark:bg-gray-800 h-[200px] rounded-3xl mb-10"></div>
+
+        {/* SKELETON GRIGLIA PREMI */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map((n) => (
+            <div 
+              key={`reward-skeleton-${n}`}
+              className="bg-white dark:bg-gray-800 p-6 rounded-2xl border-2 border-gray-100 dark:border-gray-700 h-[160px] flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
+                </div>
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-3"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -124,7 +144,6 @@ export default function Rewards({ profile, refreshProfile }) {
           onClick={closeModal} 
           className="fixed inset-0 bg-emerald-950/40 backdrop-blur-sm flex items-center justify-center z-[1001] p-4 cursor-pointer"
         >
-          {/* Aggiunto md:h-[600px] per forzare l'altezza fissa su desktop */}
           <div 
             onClick={(e) => e.stopPropagation()} 
             className="bg-white rounded-3xl max-w-5xl w-full md:h-[600px] shadow-2xl flex flex-col md:flex-row overflow-hidden relative max-h-[95vh] cursor-auto"
@@ -137,7 +156,7 @@ export default function Rewards({ profile, refreshProfile }) {
               ✕
             </button>
 
-            {/* SINISTRA: IMMAGINE (Aggiunto md:h-full) */}
+            {/* SINISTRA: IMMAGINE */}
             <div className="md:w-1/2 h-64 md:h-full bg-emerald-50 relative shrink-0">
               <img 
                 src={selectedReward.immagine || "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=1000&h=1000"} 
@@ -146,7 +165,7 @@ export default function Rewards({ profile, refreshProfile }) {
               />
             </div>
 
-            {/* DESTRA: CONTENUTO (Aggiunto h-full) */}
+            {/* DESTRA: CONTENUTO */}
             <div className="md:w-1/2 p-8 md:p-12 flex flex-col overflow-y-auto h-full">
               <span className="text-emerald-500 font-bold text-xs uppercase tracking-widest mb-2 block shrink-0">
                 {selectedReward.sottotitolo || selectedReward.categoria}
@@ -159,7 +178,7 @@ export default function Rewards({ profile, refreshProfile }) {
                 ))}
               </div>
               
-              {/* Selettore Quantità (shrink-0 per evitare che si schiacci se il testo è lungo) */}
+              {/* Selettore Quantità */}
               <div className="flex items-center justify-between mb-8 bg-emerald-50 p-5 rounded-2xl border border-emerald-100 shrink-0">
                 <span className="font-bold text-emerald-900">Quantità desiderata:</span>
                 <div className="flex items-center gap-4 bg-white px-2 py-1 rounded-xl shadow-sm border border-emerald-200">
@@ -179,7 +198,7 @@ export default function Rewards({ profile, refreshProfile }) {
                 </div>
               </div>
 
-              {/* Riepilogo e Bottone Conferma (shrink-0) */}
+              {/* Riepilogo e Bottone Conferma */}
               <div className="flex flex-col mt-auto pt-6 border-t border-gray-100 shrink-0">
                 <div className="flex justify-between items-end mb-6">
                   <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Costo Totale</span>
