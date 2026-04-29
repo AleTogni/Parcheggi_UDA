@@ -2,7 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../api/supabaseClient';
 import ParkingMap from '../components/parkingmap';
 import { calcolaPuntiSosta } from '../utils/gamification';
+import Flatpickr from "react-flatpickr";
+import "flatpickr/dist/themes/material_green.css"; 
+import { Italian } from "flatpickr/dist/l10n/it.js";
 
+const RenderStars = ({ rating }) => {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <svg key={s} className={`w-3 h-3 ${rating >= s ? 'text-yellow-400' : 'text-gray-200'}`} fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+        </svg>
+      ))}
+    </div>
+  );
+};
 
 export default function Home({ profile, destinationParking, setDestinationParking, userLoc, setUserLoc }) {
   const [parkings, setParkings] = useState([]);
@@ -34,6 +48,9 @@ export default function Home({ profile, destinationParking, setDestinationParkin
   const [chatMessages, setChatMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
   const [assistantIndex, setAssistantIndex] = useState(0);
+
+  //recensioni
+  const [showReviews, setShowReviews] = useState(false);
 
   const assistantMessages = [
     "Ciao! Sono l'assistente virtuale di Brescia Green Park. Come posso aiutarti?",
@@ -84,10 +101,13 @@ export default function Home({ profile, destinationParking, setDestinationParkin
     return () => { supabase.removeChannel(channel); };
   }, [profile]);
 
-  const loadData = async () => {
+const loadData = async () => {
     const { data: pData } = await supabase.from('parcheggio').select('*');
     const { data: postiData } = await supabase.from('posto_auto').select('*');
+    // SCARICHIAMO LE RECENSIONI CON IL NOME DELL'UTENTE
+    const { data: recData } = await supabase.from('recensioni').select('*, persona(nome)');
     const { count: activeCount } = await supabase.from('prenotazione').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
+    
     if (!pData) return;
 
     let totalFree = 0;
@@ -97,12 +117,27 @@ export default function Home({ profile, destinationParking, setDestinationParkin
       const occupati = posti.filter(item => item.stato?.toLowerCase() === 'occupato').length;
       const liberi = (p.postitot || 0) - occupati;
       const freeEV = posti.filter(item => item.tipoposto === 'Elettrico' && item.stato?.toLowerCase() === 'libero').length;
+      
+      // CALCOLO MEDIA E RACCOLTA RECENSIONI PER QUESTO PARCHEGGIO
+      const reviews = (recData || []).filter(r => r.idparcheggio === p.idparcheggio);
+      const media = reviews.length > 0 
+        ? (reviews.reduce((acc, r) => acc + r.voto, 0) / reviews.length).toFixed(1) 
+        : 0;
+
       totalFree += liberi;
       totalEVFree += freeEV;
+      
       let color = "border-emerald-500 bg-emerald-50 text-emerald-900";
       if (occupati / (p.postitot || 1) >= 1) color = "border-red-500 bg-red-50 text-red-900";
       else if (occupati / (p.postitot || 1) >= 0.5) color = "border-blue-500 bg-blue-50 text-blue-900";
-      return { ...p, occupati, liberi, color, postiList: posti };
+      
+      return { 
+        ...p, 
+        occupati, liberi, color, postiList: posti, 
+        mediaVoti: media, 
+        numRecensioni: reviews.length,
+        listaRecensioni: reviews 
+      };
     });
     setParkings(merged);
     setCityStats({ freeSpots: totalFree, evSpots: totalEVFree, activeSoste: activeCount || 0 });
@@ -203,10 +238,15 @@ export default function Home({ profile, destinationParking, setDestinationParkin
     setTimeout(() => { closeModal(); loadData(); }, 2000);
   };
 
-  const closeModal = () => {
-    setModalData(null); setBookingSpot(null); setUiMessage({text:'', type:''});
-    setBookingStart(''); setBookingEnd(''); setNuovaTarga('');
-  };
+const closeModal = () => {
+  setModalData(null); 
+  setBookingSpot(null); 
+  setUiMessage({text:'', type:''});
+  setBookingStart(''); 
+  setBookingEnd(''); 
+  setNuovaTarga('');
+  setShowReviews(false);
+};
 
   const getGroupedSpots = () => {
     if (!modalData?.postiList) return { Standard: [], Elettrico: [], Disabili: [] };
@@ -426,6 +466,7 @@ export default function Home({ profile, destinationParking, setDestinationParkin
       </div>
 
       {/* MODAL PARCHEGGIO */}
+{/* MODAL PARCHEGGIO */}
       {modalData && (
         <div onClick={closeModal} className="fixed inset-0 bg-gray-900/60 backdrop-blur-md flex items-end sm:items-center justify-center sm:p-4 z-[100] transition-all overflow-y-auto">
           <div
@@ -436,87 +477,197 @@ export default function Home({ profile, destinationParking, setDestinationParkin
             <div className="sm:hidden w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
 
             <button onClick={closeModal} className="absolute top-5 right-5 sm:top-6 sm:right-6 text-3xl font-bold text-gray-300 hover:text-gray-800 transition-colors">&times;</button>
-            <h2 className="text-2xl sm:text-4xl font-black text-gray-900 mb-2 tracking-tighter">{modalData.nome}</h2>
-            <p className="text-gray-400 font-bold mb-5 uppercase text-xs tracking-[0.2em] border-b pb-4">Gestione sosta</p>
+            <h2 className="text-2xl sm:text-4xl font-black text-gray-900 mb-2 tracking-tighter leading-none">{modalData.nome}</h2>
 
-            {uiMessage.text && (
-              <div className={`p-4 mb-5 rounded-2xl text-center font-black text-[10px] uppercase tracking-widest border animate-pulse ${uiMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                {uiMessage.text}
-              </div>
-            )}
+            {/* --- INIZIO SEZIONE STELLE CLICCABILI --- */}
+            <div 
+              onClick={() => setShowReviews(!showReviews)} 
+              className="flex items-center gap-2 mt-3 mb-5 cursor-pointer hover:opacity-70 transition-all w-fit"
+            >
+              <RenderStars rating={modalData.mediaVoti} />
+              <span className="text-xs font-bold text-emerald-600 underline tracking-widest">
+                {showReviews ? '← Torna alla sosta' : `Vedi ${modalData.numRecensioni || 0} recensioni`}
+              </span>
+            </div>
+            {/* --- FINE SEZIONE STELLE --- */}
 
-            {!bookingSpot ? (
-              <div className="grid grid-cols-3 gap-3 min-h-[200px] sm:min-h-[300px]">
-                {Object.entries(grouped).map(([tipo, posti]) => (
-                  <div
-                    key={tipo}
-                    className={`p-3 sm:p-6 rounded-2xl sm:rounded-3xl border-2 flex flex-col items-center justify-center text-center transition-all ${posti.length > 0 ? 'border-emerald-100 bg-emerald-50/30 hover:border-emerald-500 cursor-pointer shadow-sm hover:shadow-md' : 'opacity-40 bg-gray-50 border-gray-100'}`}
-                    onClick={() => posti.length > 0 && setBookingSpot(posti[0])}
-                  >
-                    {tipo === 'Standard' && <svg className="w-7 h-7 sm:w-10 sm:h-10 mb-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
-                    {tipo === 'Elettrico' && <svg className="w-7 h-7 sm:w-10 sm:h-10 mb-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
-                    {tipo === 'Disabili' && <IconH className="w-7 h-7 sm:w-10 sm:h-10 mb-2 text-yellow-500" />}
-                    <span className="font-black text-gray-800 uppercase text-[10px] sm:text-xs mb-1">{tipo}</span>
-                    <span className={`text-xl sm:text-2xl font-black ${posti.length > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>{posti.length}</span>
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">liberi</span>
-                    {posti.length > 0 && <button className="mt-3 bg-emerald-600 text-white px-3 py-1.5 rounded-lg sm:rounded-xl text-[10px] font-black uppercase shadow-sm">Scegli</button>}
-                  </div>
-                ))}
+            {/* BIVIO: MOSTRA RECENSIONI OPPURE MOSTRA PRENOTAZIONE */}
+            {showReviews ? (
+              /* VISTA 1: LISTA RECENSIONI */
+              <div className="space-y-3 h-[300px] sm:h-[400px] overflow-y-auto pr-2 custom-scrollbar animate-fade-in-up pb-4 border-t border-gray-100 pt-4">
+                {modalData.listaRecensioni?.length === 0 ? (
+                  <p className="text-center text-gray-400 py-10 font-bold uppercase text-xs tracking-widest">Nessuna recensione per ora</p>
+                ) : (
+                  modalData.listaRecensioni?.map(r => (
+                    <div key={r.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-black text-xs text-emerald-900 uppercase">{r.persona?.nome || 'Utente anonimo'}</span>
+                        <RenderStars rating={r.voto} />
+                      </div>
+                      <p className="text-sm text-gray-600 italic leading-relaxed">"{r.testo || 'Nessun commento scritto'}"</p>
+                    </div>
+                  ))
+                )}
               </div>
             ) : (
-              <div className="flex flex-col">
-                <div className="flex items-center gap-3 mb-5 bg-emerald-50 p-3 sm:p-4 rounded-2xl border border-emerald-100 shadow-sm">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100 shrink-0">
-                    <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  </div>
-                  <div>
-                    <h3 className="font-black text-emerald-900 text-base sm:text-lg uppercase tracking-tighter">Assegnato: {bookingSpot.tipoposto}</h3>
-                    <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">{bookingSpot.piano} • Brescia Green</p>
-                  </div>
-                </div>
+              /* VISTA 2: PRENOTAZIONE (IL TUO CODICE ORIGINALE) */
+              <>
+                <p className="text-gray-400 font-bold mb-5 uppercase text-xs tracking-[0.2em] border-b pb-4">Gestione sosta</p>
 
-                <div className="space-y-4 mb-5">
-                  <div>
-                    <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest">Il tuo veicolo</label>
-                    <select value={selectedTarga} onChange={(e) => setSelectedTarga(e.target.value)} className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-emerald-500 font-black text-gray-800 outline-none transition-all shadow-sm text-sm">
-                      {userVehicles.map(v => <option key={v.targa} value={v.targa}>{v.targa}{v.alimentazione ? ` (${v.alimentazione})` : ''}</option>)}
-                      <option value="manuale">Inserisci targa manualmente...</option>
-                    </select>
+                {uiMessage.text && (
+                  <div className={`p-4 mb-5 rounded-2xl text-center font-black text-[10px] uppercase tracking-widest border animate-pulse ${uiMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                    {uiMessage.text}
                   </div>
-                  {selectedTarga === 'manuale' && (
-                    <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest">Nuova targa</label>
-                      <input type="text" placeholder="Es. AA123BB" value={nuovaTarga} onChange={(e) => setNuovaTarga(e.target.value.toUpperCase())} className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black uppercase outline-none focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm" />
+                )}
+
+                {!bookingSpot ? (
+                  <div className="grid grid-cols-3 gap-3 min-h-[200px] sm:min-h-[300px]">
+                    {Object.entries(grouped).map(([tipo, posti]) => (
+                      <div
+                        key={tipo}
+                        className={`p-3 sm:p-6 rounded-2xl sm:rounded-3xl border-2 flex flex-col items-center justify-center text-center transition-all ${posti.length > 0 ? 'border-emerald-100 bg-emerald-50/30 hover:border-emerald-500 cursor-pointer shadow-sm hover:shadow-md' : 'opacity-40 bg-gray-50 border-gray-100'}`}
+                        onClick={() => posti.length > 0 && setBookingSpot(posti[0])}
+                      >
+                        {tipo === 'Standard' && <svg className="w-7 h-7 sm:w-10 sm:h-10 mb-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
+                        {tipo === 'Elettrico' && <svg className="w-7 h-7 sm:w-10 sm:h-10 mb-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+                        {tipo === 'Disabili' && <IconH className="w-7 h-7 sm:w-10 sm:h-10 mb-2 text-yellow-500" />}
+                        <span className="font-black text-gray-800 uppercase text-[10px] sm:text-xs mb-1">{tipo}</span>
+                        <span className={`text-xl sm:text-2xl font-black ${posti.length > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>{posti.length}</span>
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">liberi</span>
+                        {posti.length > 0 && <button className="mt-3 bg-emerald-600 text-white px-3 py-1.5 rounded-lg sm:rounded-xl text-[10px] font-black uppercase shadow-sm">Scegli</button>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-3 mb-5 bg-emerald-50 p-3 sm:p-4 rounded-2xl border border-emerald-100 shadow-sm">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100 shrink-0">
+                        <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      </div>
+                      <div>
+                        <h3 className="font-black text-emerald-900 text-base sm:text-lg uppercase tracking-tighter">Assegnato: {bookingSpot.tipoposto}</h3>
+                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">{bookingSpot.piano} • Brescia Green</p>
+                      </div>
                     </div>
-                  )}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest">Arrivo</label>
-                      <input type="datetime-local" min={nowStr} value={bookingStart} onChange={(e) => setBookingStart(e.target.value)} className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all" />
+
+                    <div className="space-y-4 mb-5">
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest">Il tuo veicolo</label>
+                        <select value={selectedTarga} onChange={(e) => setSelectedTarga(e.target.value)} className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-emerald-500 font-black text-gray-800 outline-none transition-all shadow-sm text-sm">
+                          {userVehicles.map(v => <option key={v.targa} value={v.targa}>{v.targa}{v.alimentazione ? ` (${v.alimentazione})` : ''}</option>)}
+                          <option value="manuale">Inserisci targa manualmente...</option>
+                        </select>
+                      </div>
+                      {selectedTarga === 'manuale' && (
+                        <div>
+                          <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest">Nuova targa</label>
+                          <input type="text" placeholder="Es. AA123BB" value={nuovaTarga} onChange={(e) => setNuovaTarga(e.target.value.toUpperCase())} className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black uppercase outline-none focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm" />
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* ARRIVO */}
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest">Arrivo</label>
+                          <div className="flex gap-2">
+                            {/* DATA */}
+                            <div className="flex-1">
+                              <Flatpickr
+                                value={bookingStart ? bookingStart.split('T')[0] : ''}
+                                onChange={([date]) => {
+                                  if (!date) return setBookingStart('');
+                                  const d = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                                  const t = bookingStart ? bookingStart.split('T')[1].substring(0,5) : '10:00';
+                                  setBookingStart(`${d}T${t}`);
+                                }}
+                                options={{ 
+                                  locale: Italian, 
+                                  minDate: "today", 
+                                  dateFormat: "Y-m-d", // Formato per il computer (Nessun bug)
+                                  altInput: true,      // Crea un input finto per l'utente
+                                  altFormat: "d/m/Y"   // Formato bello per l'utente
+                                }}
+                                className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all"
+                                placeholder="Data Arrivo"
+                              />
+                            </div>
+                            {/* ORA (Nativa, veloce, digitabile) */}
+                            <div className="w-[110px] shrink-0">
+                              <input
+                                type="time"
+                                value={bookingStart ? bookingStart.split('T')[1].substring(0, 5) : ''}
+                                onChange={(e) => {
+                                  const d = bookingStart ? bookingStart.split('T')[0] : new Date().toISOString().split('T')[0];
+                                  const t = e.target.value || '10:00';
+                                  setBookingStart(`${d}T${t}`);
+                                }}
+                                className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all text-center"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* USCITA */}
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest">Uscita</label>
+                          <div className="flex gap-2">
+                            {/* DATA */}
+                            <div className="flex-1">
+                              <Flatpickr
+                                value={bookingEnd ? bookingEnd.split('T')[0] : ''}
+                                onChange={([date]) => {
+                                  if (!date) return setBookingEnd('');
+                                  const d = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                                  const t = bookingEnd ? bookingEnd.split('T')[1].substring(0,5) : '12:00';
+                                  setBookingEnd(`${d}T${t}`);
+                                }}
+                                options={{ 
+                                  locale: Italian, 
+                                  minDate: bookingStart ? bookingStart.split('T')[0] : "today", 
+                                  dateFormat: "Y-m-d", 
+                                  altInput: true, 
+                                  altFormat: "d/m/Y" 
+                                }}
+                                className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all"
+                                placeholder="Data Uscita"
+                              />
+                            </div>
+                            {/* ORA (Nativa, veloce, digitabile) */}
+                            <div className="w-[110px] shrink-0">
+                              <input
+                                type="time"
+                                value={bookingEnd ? bookingEnd.split('T')[1].substring(0, 5) : ''}
+                                onChange={(e) => {
+                                  const d = bookingEnd ? bookingEnd.split('T')[0] : (bookingStart ? bookingStart.split('T')[0] : new Date().toISOString().split('T')[0]);
+                                  const t = e.target.value || '12:00';
+                                  setBookingEnd(`${d}T${t}`);
+                                }}
+                                className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all text-center"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {preventivo > 0 && (
+                        <div className="bg-emerald-900 p-4 sm:p-5 rounded-2xl flex justify-between items-center text-white shadow-lg mt-2">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Costo totale stimato</p>
+                          <p className="text-2xl sm:text-3xl font-black">{preventivo} €</p>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest">Uscita</label>
-                      <input type="datetime-local" min={bookingStart || nowStr} value={bookingEnd} onChange={(e) => setBookingEnd(e.target.value)} className="w-full p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200 font-black text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all" />
+
+                    <div className="flex gap-3">
+                      <button onClick={handleConfirmBooking} className="flex-1 bg-emerald-600 text-white py-3 sm:py-4 rounded-[1.5rem] font-black text-base sm:text-lg hover:bg-emerald-700 transition-all shadow-md active:scale-95 uppercase tracking-wide">
+                        Paga e conferma
+                      </button>
+                      <button onClick={() => setBookingSpot(null)} className="px-6 sm:px-10 bg-gray-100 text-gray-500 rounded-[1.5rem] font-black hover:bg-gray-200 transition-all uppercase text-xs tracking-widest">
+                        Indietro
+                      </button>
                     </div>
                   </div>
-
-                  {preventivo > 0 && (
-                    <div className="bg-emerald-900 p-4 sm:p-5 rounded-2xl flex justify-between items-center text-white shadow-lg mt-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Costo totale stimato</p>
-                      <p className="text-2xl sm:text-3xl font-black">{preventivo} €</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-3">
-                  <button onClick={handleConfirmBooking} className="flex-1 bg-emerald-600 text-white py-3 sm:py-4 rounded-[1.5rem] font-black text-base sm:text-lg hover:bg-emerald-700 transition-all shadow-md active:scale-95 uppercase tracking-wide">
-                    Paga e conferma
-                  </button>
-                  <button onClick={() => setBookingSpot(null)} className="px-6 sm:px-10 bg-gray-100 text-gray-500 rounded-[1.5rem] font-black hover:bg-gray-200 transition-all uppercase text-xs tracking-widest">
-                    Indietro
-                  </button>
-                </div>
-              </div>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -21,6 +21,8 @@ export default function Profile({ profile, refreshProfile, setDestinationParking
   const [prenotazioni, setPrenotazioni] = useState([]);
   const [uiMessage, setUiMessage] = useState('');
   const [activeTab, setActiveTab] = useState('attive');
+  const [reviewModal, setReviewModal] = useState(null);
+  const [reviewForm, setReviewForm] = useState({ voto: 5, testo: '' });
 
   const tariffaOraria = 2.00;
 
@@ -61,13 +63,13 @@ export default function Profile({ profile, refreshProfile, setDestinationParking
   }
 
 async function loadPrenotazioni() {
-  const { data } = await supabase
-    .from('prenotazione')
-    .select('*, posto_auto(piano, parcheggio(nome, latitudine, longitudine))') // Aggiunte coordinate
-    .eq('idpersona', profile.idpersona)
-    .order('orarioinizio', { ascending: false });
-  setPrenotazioni(data || []);
-}
+    const { data } = await supabase
+      .from('prenotazione')
+      .select('*, posto_auto(piano, idparcheggio, parcheggio(nome, latitudine, longitudine))') 
+      .eq('idpersona', profile.idpersona)
+      .order('orarioinizio', { ascending: false });
+    setPrenotazioni(data || []);
+  }
 
   const showMessage = (msg) => {
     setUiMessage(msg);
@@ -188,6 +190,32 @@ async function loadPrenotazioni() {
 
     await supabase.auth.signOut();
     window.location.href = '/login';
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewModal) return;
+
+    const { error } = await supabase.from('recensioni').insert([{
+      idprenotazione: reviewModal.idprenotazione,
+      idparcheggio: reviewModal.posto_auto.idparcheggio,
+      idpersona: profile.idpersona,
+      voto: reviewForm.voto,
+      testo: reviewForm.testo
+    }]);
+
+    if (error) {
+      if (error.code === '23505') { // 23505 è il codice errore di Supabase per la clausola UNIQUE
+        showMessage("Hai già recensito questa sosta!");
+      } else {
+        showMessage("Errore durante l'invio della recensione.");
+        console.error(error);
+      }
+    } else {
+      showMessage("Recensione inviata con successo! Grazie!");
+    }
+    
+    setReviewModal(null);
+    setReviewForm({ voto: 5, testo: '' });
   };
 
   const prenoFiltrate = prenotazioni.filter(p => activeTab === 'attive' ? p.stato === 'Attiva' : p.stato !== 'Attiva');
@@ -368,7 +396,7 @@ async function loadPrenotazioni() {
                       )}
                     </div>
 
-{/* Bottoni in basso */}
+{/* Bottoni in basso (Soste Attive) */}
                     {p.stato === 'Attiva' && (
                       <div className="flex gap-2 mt-auto pt-4 border-t border-gray-100">
                         {/* PULSANTE GUIDA */}
@@ -404,6 +432,19 @@ async function loadPrenotazioni() {
                         </button>
                       </div>
                     )}
+
+                    {/* BOTTONE RECENSIONE PER SOSTE CONCLUSE */}
+                    {p.stato === 'Conclusa' && (
+                      <div className="flex mt-auto pt-4 border-t border-gray-100">
+                        <button 
+                          onClick={() => { setReviewModal(p); setReviewForm({ voto: 5, testo: '' }); }}
+                          className="w-full py-2.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-xl text-[10px] sm:text-xs font-black tracking-wider hover:bg-yellow-100 transition-all shadow-sm flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                          Valuta Sosta
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -419,6 +460,45 @@ async function loadPrenotazioni() {
         </div>
 
       </div>
+      {/* MODAL RECENSIONE */}
+      {reviewModal && (
+        <div onClick={() => setReviewModal(null)} className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] transition-all">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white p-6 sm:p-8 rounded-3xl max-w-md w-full shadow-2xl relative animate-scale-up">
+            <button onClick={() => setReviewModal(null)} className="absolute top-4 right-4 text-2xl font-bold text-gray-300 hover:text-gray-800 transition-colors">&times;</button>
+            
+            <h2 className="text-2xl font-black text-gray-900 mb-1">Com'è andata?</h2>
+            <p className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-widest">{reviewModal.posto_auto?.parcheggio?.nome}</p>
+
+            {/* Selettore Stelle */}
+            <div className="flex justify-center gap-2 mb-6">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <svg 
+                  key={star}
+                  onClick={() => setReviewForm({ ...reviewForm, voto: star })}
+                  className={`w-10 h-10 cursor-pointer transition-all hover:scale-110 ${reviewForm.voto >= star ? 'text-yellow-400' : 'text-gray-200'}`} 
+                  fill="currentColor" viewBox="0 0 20 20"
+                >
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
+              ))}
+            </div>
+
+            <textarea 
+              placeholder="Scrivi una breve recensione (opzionale)..."
+              value={reviewForm.testo}
+              onChange={(e) => setReviewForm({ ...reviewForm, testo: e.target.value })}
+              className="w-full p-4 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:ring-2 focus:ring-yellow-400 transition-all text-sm font-medium resize-none h-28 mb-4"
+            ></textarea>
+
+            <button 
+              onClick={handleSubmitReview}
+              className="w-full bg-yellow-400 text-yellow-950 py-3.5 rounded-xl font-black text-sm uppercase tracking-widest shadow-md hover:bg-yellow-500 transition-all"
+            >
+              Invia Recensione
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
