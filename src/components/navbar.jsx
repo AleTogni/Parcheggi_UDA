@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '../api/supabaseClient';
+import ThemeSwitch from './ThemeSwitch';
 
 export default function Navbar({ session, profile }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -18,49 +19,60 @@ export default function Navbar({ session, profile }) {
         </Link>
 
         {/* DESKTOP NAV */}
-        <div className="hidden sm:flex items-center gap-3">
-          {session ? (
-            <>
-              {/* Spostato qui il pulsante dei punti eco per farlo apparire a sinistra */}
-              <Link to="/rewards" className="flex items-center gap-1 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-black">
-                🍃 {profile?.punti_accumulati || 0}
-              </Link>
-              
-              {/* Il pulsante Area Admin ora è a destra dei punti */}
-              {isAdmin && (
-                <Link to="/admin" className="flex items-center justify-center h-10 bg-emerald-800 hover:bg-emerald-700 text-emerald-50 font-bold px-4 rounded-full text-sm transition-all shadow-sm border border-emerald-700">
-                  Area Admin
-                </Link>
-              )}
-              
-              <Link
-                to="/profile"
-                className="flex items-center h-10 gap-2 bg-emerald-800 hover:bg-emerald-700 p-1 pr-4 rounded-full transition-all border border-emerald-700 shadow-sm"
-              >
-                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center font-black text-sm text-emerald-950 shadow-inner shrink-0">
-                  {iniziale}
-                </div>
-                <span className="font-bold text-sm text-emerald-50">{profile?.nome || 'Profilo'}</span>
-              </Link>
-              <button
-                onClick={() => supabase.auth.signOut()}
-                className="flex items-center justify-center h-10 bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition-all px-4 rounded-full shadow-sm border border-red-600"
-              >
-                Esci
-              </button>
-            </>
-          ) : (
-            <Link to="/login" className="flex items-center justify-center h-10 font-bold bg-white text-emerald-900 px-5 rounded-full hover:bg-emerald-100 transition shadow-sm border border-transparent">
-              Accedi
-            </Link>
-          )}
+<div className="hidden sm:flex items-center gap-3">
+  {session ? (
+    <>
+      <Link to="/rewards" className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-black">
+        🍃 {profile?.punti_accumulati || 0}
+      </Link>
+      
+      {isAdmin && (
+        <Link to="/admin" className="flex items-center justify-center h-10 bg-emerald-800 hover:bg-emerald-700 text-emerald-50 font-bold px-4 rounded-full text-sm transition-all shadow-sm border border-emerald-700">
+          Area Admin
+        </Link>
+      )}
+      
+      <Link
+        to="/profile"
+        className="flex items-center h-10 gap-2 bg-emerald-800 hover:bg-emerald-700 p-1 pr-4 rounded-full transition-all border border-emerald-700 shadow-sm"
+      >
+        <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center font-black text-sm text-emerald-950 shadow-inner shrink-0">
+          {iniziale}
         </div>
+        <span className="font-bold text-sm text-emerald-50">{profile?.nome || 'Profilo'}</span>
+      </Link>
+
+        <ThemeSwitch />
+
+
+
+      <button
+        onClick={() => supabase.auth.signOut()}
+        className="flex items-center justify-center h-10 bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition-all px-4 rounded-full shadow-sm border border-red-600"
+      >
+        Esci
+      </button>
+    </>
+  ) : (
+    <>
+      <Link to="/login" className="flex items-center justify-center h-10 font-bold bg-white text-emerald-900 px-5 rounded-full hover:bg-emerald-100 transition shadow-sm border border-transparent">
+        Accedi
+      </Link>
+      
+      {/* MODIFICA QUI: Stesso trattamento per l'utente non loggato */}
+      <div className="flex items-center justify-center h-10 px-2 bg-emerald-800/50 rounded-full border border-emerald-700">
+        <ThemeSwitch />
+      </div>
+    </>
+  )}
+</div>
 
         {/* MOBILE: avatar + hamburger */}
         <div className="flex sm:hidden items-center gap-2">
           {session && (
-            <Link to="/rewards" className="flex items-center gap-1 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-black">
-              🍃 {profile?.punti_accumulati || 0}
+            <Link to="/rewards" className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-black">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 3s6 0 10 4c2 2 3 5 3 9-4 0-7-1-9-3C5 9 5 3 5 3z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 3c0 0-1 8 4 12"/></svg>
+              {profile?.punti_accumulati || 0}
             </Link>
           )}
           <button
@@ -107,6 +119,10 @@ export default function Navbar({ session, profile }) {
                 </Link>
               )}
               <div className="h-px bg-emerald-800 my-1" />
+              <div className="flex items-center justify-between px-4 py-2">
+                <span className="text-sm font-bold text-emerald-100">Tema</span>
+                <ThemeSwitch />
+              </div>
               <button
                 onClick={() => { supabase.auth.signOut(); closeMenu(); }}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-red-300 hover:bg-red-900/40 transition-all"
@@ -116,13 +132,19 @@ export default function Navbar({ session, profile }) {
               </button>
             </>
           ) : (
-            <Link
-              to="/login"
-              onClick={closeMenu}
-              className="flex items-center justify-center py-3 rounded-xl font-bold text-sm bg-white text-emerald-900 hover:bg-emerald-100 transition-all"
-            >
-              Accedi
-            </Link>
+            <>
+              <Link
+                to="/login"
+                onClick={closeMenu}
+                className="flex items-center justify-center py-3 rounded-xl font-bold text-sm bg-white text-emerald-900 hover:bg-emerald-100 transition-all"
+              >
+                Accedi
+              </Link>
+              <div className="flex items-center justify-between px-4 py-2">
+                <span className="text-sm font-bold text-emerald-100">Tema</span>
+                <ThemeSwitch />
+              </div>
+            </>
           )}
         </div>
       </div>

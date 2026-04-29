@@ -435,7 +435,7 @@ export default function AdminDashboard({ profile }) {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredUtenti.map(utente => (
-                  <tr key={utente.idpersona} className="transition-colors hover:bg-gray-50">
+                  <tr key={utente.idpersona} className={`transition-none ${typeof window !== 'undefined' && window.document.documentElement.classList.contains('dark') ? '' : 'hover:bg-gray-50'}`}>
                     <td className="p-3">
                       <p className="font-bold text-gray-800">{utente.nome || 'Utente'} {utente.cognome || ''}</p>
                       <p className="text-[10px] text-gray-400 font-mono">ID: {String(utente.idpersona).substring(0, 8)}</p>
@@ -446,13 +446,15 @@ export default function AdminDashboard({ profile }) {
                     </td>
                     <td className="p-3">
                       <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase border ${
-                        utente.ruolo === 'admin' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                        'bg-gray-100 text-gray-600 border-gray-200'
+                        utente.ruolo === 'admin' ? (typeof window !== 'undefined' && window.document.documentElement.classList.contains('dark')
+                          ? 'bg-gray-800 text-purple-500 border-purple-700' // dark mode
+                          : 'bg-purple-100 text-purple-800 border-purple-200') // light mode
+                        : 'bg-gray-100 text-gray-600 border-gray-200'
                       }`}>
                         {utente.ruolo || 'user'}
                       </span>
                     </td>
-<td className="p-3 text-center">
+                    <td className="p-3 text-center">
                       {utente.idpersona !== profile?.idpersona ? (
                         /* FIX ALLINEAMENTO: Usiamo una griglia fissa larga circa 200px */
                         <div className="grid grid-cols-2 gap-2 w-52 mx-auto">
@@ -462,7 +464,11 @@ export default function AdminDashboard({ profile }) {
                             {utente.ruolo !== 'admin' && (
                               <button 
                                 onClick={() => handleMakeAdmin(utente)}
-                                className="w-full text-[10px] font-bold px-3 py-2 rounded-lg border text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 transition-all uppercase"
+                                className={`w-full text-[10px] font-bold px-3 py-2 rounded-lg border uppercase transition-none
+                                  ${typeof window !== 'undefined' && window.document.documentElement.classList.contains('dark')
+                                    ? 'text-purple-500 border-purple-700 bg-gray-800' // dark mode
+                                    : 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100'}
+                                `}
                               >
                                 Rendi Admin
                               </button>

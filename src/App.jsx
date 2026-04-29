@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './api/supabaseClient';
+import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -72,6 +73,7 @@ export default function App() {
   }
 
   return (
+    <ThemeProvider profile={profile}>
     <BrowserRouter>
       <Navbar session={session} profile={profile} />
       <Routes>
@@ -106,5 +108,6 @@ export default function App() {
         <Route path="/rewards" element={session ? (profile ? (<Rewards profile={profile} refreshProfile={() => fetchProfile(session.user.id)} /> ) : ( <div>Caricamento...</div> )) : (<Navigate to="/login" />)} />
       </Routes>
     </BrowserRouter>
+    </ThemeProvider>
   );
 }
