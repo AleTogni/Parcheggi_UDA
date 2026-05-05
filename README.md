@@ -34,7 +34,7 @@ Il progetto utilizza uno stack moderno per garantire prestazioni elevate e sincr
 Per eseguire il progetto in ambiente locale, seguire la procedura descritta:
 
 1. Clonare il repository:  
-   git clone <[url-del-repository](https://github.com/AleTogni/Parcheggi_UDA)>
+   git clone <[parcheggi_UDA](https://github.com/AleTogni/Parcheggi_UDA)>
 
 2. Installare le dipendenze necessarie:  
    npm install
