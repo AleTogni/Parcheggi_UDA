@@ -48,3 +48,6 @@ Per eseguire il progetto in ambiente locale, seguire la procedura descritta:
    npm run dev
 
 L'interfaccia sarà disponibile all'indirizzo predefinito http://localhost:5173 o ParcheggiUDA.netlify.app
+
+
+Componenti del progetto: Togni Alessandro, Singh Manrayet, Ponti Daniele
