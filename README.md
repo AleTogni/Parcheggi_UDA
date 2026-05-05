@@ -33,18 +33,18 @@ Il progetto utilizza uno stack moderno per garantire prestazioni elevate e sincr
 
 Per eseguire il progetto in ambiente locale, seguire la procedura descritta:
 
-1. Clonare il repository:
+1. Clonare il repository:  
    git clone <[url-del-repository](https://github.com/AleTogni/Parcheggi_UDA)>
 
-2. Installare le dipendenze necessarie:
+2. Installare le dipendenze necessarie:  
    npm install
 
-3. Configurazione dell'ambiente:
-   creare un file .env nella directory principale e configurare le seguenti chiavi:
-   VITE_SUPABASE_URL=il_tuo_url_supabase
-   VITE_SUPABASE_ANON_KEY=la_tua_chiave_anon_supabase
+3. Configurazione dell'ambiente:  
+   creare un file .env nella directory principale e configurare le seguenti chiavi:  
+   VITE_SUPABASE_URL=il_tuo_url_supabase  
+   VITE_SUPABASE_ANON_KEY=la_tua_chiave_anon_supabase  
 
-4. Avvio dell'applicazione:
+4. Avvio dell'applicazione:  
    npm run dev
 
 L'interfaccia sarà disponibile all'indirizzo predefinito http://localhost:5173 o ParcheggiUDA.netlify.app
