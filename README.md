@@ -1,5 +1,7 @@
 # Brescia Green Park
 
+[![Live Demo](https://img.shields.io/badge/Demo-Live_su_Netlify-success?style=for-the-badge)](https://parcheggiuda.netlify.app)
+
 Brescia Green Park è una piattaforma web avanzata progettata per la gestione intelligente della sosta urbana. Il progetto nasce come Minimum Viable Product (MVP) con l'obiettivo di ottimizzare l'uso degli spazi di parcheggio cittadini e promuovere attivamente la mobilità sostenibile attraverso un sistema integrato di incentivi digitali e gamification.
 
 ## Visione del progetto
@@ -33,21 +35,35 @@ Il progetto utilizza uno stack moderno per garantire prestazioni elevate e sincr
 
 Per eseguire il progetto in ambiente locale, seguire la procedura descritta:
 
-1. Clonare il repository:  
-   git clone <[parcheggi_UDA](https://github.com/AleTogni/Parcheggi_UDA)>
 
-2. Installare le dipendenze necessarie:  
+1. Clonare il repository:
+```bash
+   git clone https://github.com/AleTogni/Parcheggi_UDA
+```
+2. Navigare nella cartella
+```bash
+   cd Parcheggi_UDA
+```
+3. Installare le dipendenze necessarie:
+```bash 
    npm install
+```
 
-3. Configurazione dell'ambiente:  
-   creare un file .env nella directory principale e configurare le seguenti chiavi:  
+4. Creare un file .env nella directory principale e configurare le seguenti chiavi:
+```bash 
    VITE_SUPABASE_URL=il_tuo_url_supabase  
    VITE_SUPABASE_ANON_KEY=la_tua_chiave_anon_supabase  
-
-4. Avvio dell'applicazione:  
+```
+5. Avvio dell'applicazione:
+```bash 
    npm run dev
+```
+L'interfaccia sarà disponibile all'indirizzo locale predefinito http://localhost:5173
 
-L'interfaccia sarà disponibile all'indirizzo predefinito http://localhost:5173 o [http://ParcheggiUDA.netlify.app](https://parcheggiuda.netlify.app)
 
+## Team di Sviluppo
 
-Componenti del progetto: Togni Alessandro, Singh Manrayet, Ponti Daniele
+Questo progetto è stato realizzato da:
+* **Togni Alessandro**
+* **Singh Manrayet**
+* **Ponti Daniele**
