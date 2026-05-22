@@ -41,6 +41,7 @@ export default function Home({ profile, destinationParking, setDestinationParkin
 
   const [uiMessage, setUiMessage] = useState({ text: '', type: '' });
   const [showGpsError, setShowGpsError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
  
   // Stato per il popup dell'assistente virtuale
@@ -141,6 +142,7 @@ const loadData = async () => {
     });
     setParkings(merged);
     setCityStats({ freeSpots: totalFree, evSpots: totalEVFree, activeSoste: activeCount || 0 });
+    setIsLoading(false); 
   };
 
   const loadUserVehicles = async () => {
@@ -418,49 +420,71 @@ const closeModal = () => {
             </div>
           </div>
 
-          <div className="overflow-y-auto px-3 py-2 flex flex-col gap-3 custom-scrollbar flex-1">
-            {filteredParkings.length === 0 && (
-              <div className="flex items-center justify-center h-32 text-gray-400 text-sm font-bold">
-                Nessun parcheggio trovato
-              </div>
-            )}
-            {filteredParkings.map(p => {
-              const isHovered = hoveredParkingId === p.idparcheggio;
-              return (
-                <div
-                  key={p.idparcheggio}
-                  onClick={() => {
-                    setModalData(p);
-
-                    if (window.innerWidth < 1024) setMobileView('mappa');
-                  }}
-                  onMouseEnter={() => setHoveredParkingId(p.idparcheggio)}
-                  onMouseLeave={() => setHoveredParkingId(null)}
-                  className={`shrink-0 p-4 rounded-2xl border-2 cursor-pointer relative overflow-hidden group ${p.color} ${isHovered ? 'ring-4 ring-emerald-400/50 scale-[1.01] bg-emerald-100 shadow-lg z-10 transition-all duration-300' : 'shadow-sm hover:shadow-md transition-all duration-300'}`}
-                >
-                  <div className="relative z-10 flex justify-between items-center">
-                    <div>
-                      <h3 className="font-black text-base sm:text-lg mb-1 group-hover:text-emerald-800 transition-colors">{p.nome}</h3>
-                      <p className="text-xl sm:text-2xl font-black">
-                        {p.liberi} <span className="text-[10px] font-bold opacity-60 uppercase tracking-widest">/ {p.postitot} liberi</span>
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1 items-end">
-                      {p.postiList.some(s => s.tipoposto === 'Elettrico') && (
-                        <span className="bg-blue-600 text-white text-[9px] px-2 py-1 rounded font-black shadow-sm flex items-center gap-1">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> EV
-                        </span>
-                      )}
-                      {p.postiList.some(s => s.tipoposto === 'Disabili') && (
-                        <span className="bg-yellow-500 text-white text-[9px] px-2 py-1 rounded font-black shadow-sm flex items-center gap-1">
-                          <IconH className="w-3 h-3" /> H
-                        </span>
-                      )}
+<div className="overflow-y-auto px-3 py-2 flex flex-col gap-3 custom-scrollbar flex-1">
+            {isLoading ? (
+              /* SKELETON LOADING PULITO E CON KEY UNICHE */
+              <>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  // LA MAGIA È QUI: key={`skeleton-${n}`} impedisce a React di riciclare l'elemento!
+                  <div key={`skeleton-${n}`} className="shrink-0 p-4 min-h-[96px] flex flex-col justify-center rounded-2xl border-2 border-gray-100 bg-gray-50 shadow-sm animate-pulse">
+                    <div className="relative z-10 flex justify-between items-center w-full">
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="h-5 sm:h-6 bg-gray-200 rounded-md w-3/4 mb-2"></div>
+                        <div className="h-6 sm:h-7 bg-gray-200 rounded-md w-1/2"></div>
+                      </div>
+                      <div className="flex flex-row gap-1.5 items-center justify-end shrink-0">
+                        <div className="h-5 w-9 bg-gray-200 rounded shadow-sm"></div>
+                        <div className="h-5 w-7 bg-gray-200 rounded shadow-sm"></div>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </>
+            ) : (
+              /* CONTENUTO REALE */
+              filteredParkings.length === 0 ? (
+                <div className="flex items-center justify-center h-32 text-gray-400 text-sm font-bold">
+                  Nessun parcheggio trovato
                 </div>
-              );
-            })}
+              ) : (
+                filteredParkings.map(p => {
+                  const isHovered = hoveredParkingId === p.idparcheggio;
+                  return (
+                    <div
+                      key={p.idparcheggio}
+                      onClick={() => {
+                        setModalData(p);
+                        if (window.innerWidth < 1024) setMobileView('mappa');
+                      }}
+                      onMouseEnter={() => setHoveredParkingId(p.idparcheggio)}
+                      onMouseLeave={() => setHoveredParkingId(null)}
+                      className={`shrink-0 p-4 min-h-[96px] flex flex-col justify-center rounded-2xl border-2 cursor-pointer relative overflow-hidden group ${p.color} ${isHovered ? (typeof window !== 'undefined' && window.document.documentElement.classList.contains('dark') ? 'ring-4 ring-emerald-400/50 scale-[1.01] shadow-lg z-10 transition duration-300' : 'ring-4 ring-emerald-400/50 scale-[1.01] bg-emerald-100 shadow-lg z-10 transition duration-300') : 'shadow-sm hover:shadow-md transition duration-300'}`}
+                    >
+                      <div className="relative z-10 flex justify-between items-center w-full">
+                        <div className="flex-1 min-w-0 pr-2">
+                          <h3 className="font-black text-base sm:text-lg mb-1 leading-none group-hover:text-emerald-800 transition-colors truncate">{p.nome}</h3>
+                          <p className="text-xl sm:text-2xl font-black leading-none mt-1.5 truncate">
+                            {p.liberi} <span className="text-[10px] font-bold opacity-60 uppercase tracking-widest whitespace-nowrap">/ {p.postitot} liberi</span>
+                          </p>
+                        </div>
+                        <div className="flex flex-row gap-1.5 items-center justify-end shrink-0">
+                          {p.postiList.some(s => s.tipoposto === 'Elettrico') && (
+                            <span className="bg-blue-600 text-white text-[9px] px-2 py-1 rounded font-black shadow-sm flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> EV
+                            </span>
+                          )}
+                          {p.postiList.some(s => s.tipoposto === 'Disabili') && (
+                            <span className="bg-yellow-500 text-white text-[9px] px-2 py-1 rounded font-black shadow-sm flex items-center gap-1">
+                              <IconH className="w-3 h-3" /> H
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )
+            )}
           </div>
         </div>
       </div>

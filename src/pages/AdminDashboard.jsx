@@ -11,6 +11,7 @@ export default function AdminDashboard({ profile }) {
   const [newParking, setNewParking] = useState({ nome: '', postitot: 100, coperto: true, latitudine: 45.54, longitudine: 10.22 });
   const [newSpot, setNewSpot] = useState({ idparcheggio: '', piano: '', tipoposto: 'Standard' });
   const [uiMessage, setUiMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   const [showBookingsModal, setShowBookingsModal] = useState(false);
   const [activeTab, setActiveTab] = useState('attive'); 
@@ -45,6 +46,7 @@ export default function AdminDashboard({ profile }) {
     
     if (utentiData) setListaUtenti(utentiData);
     if (p && p.length > 0 && !newSpot.idparcheggio) setNewSpot(prev => ({ ...prev, idparcheggio: p[0].idparcheggio }));
+    setIsLoading(false);
   };
 
   const processDataForChart = (data, view) => {
@@ -239,30 +241,44 @@ export default function AdminDashboard({ profile }) {
         {uiMessage && <div className="bg-gray-800 text-white px-5 py-2 rounded-lg font-bold shadow-md animate-pulse text-xs">{uiMessage}</div>}
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Utenti</p>
-          <p className="text-3xl font-black text-gray-800">{stats.utenti}</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Impianti</p>
-          <p className="text-3xl font-black text-emerald-700">{stats.parcheggi}</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Posti</p>
-          <p className="text-3xl font-black text-blue-700">{stats.posti}</p>
-        </div>
-        
-        <div 
-          onClick={handleOpenBookings}
-          className="bg-emerald-50 p-6 rounded-2xl border border-emerald-200 shadow-sm hover:bg-emerald-100 hover:border-emerald-300 transition-all cursor-pointer group"
-        >
-          <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest mb-1">Soste Attive</p>
-          <div className="flex justify-between items-end">
-            <p className="text-3xl font-black text-emerald-900">{stats.attive}</p>
-            <span className="text-[10px] font-bold text-emerald-600 border border-emerald-200 px-2 py-1 rounded bg-white group-hover:border-emerald-400 transition-colors">GESTISCI</span>
-          </div>
-        </div>
+<div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {isLoading ? (
+          /* SKELETON CARDS */
+          <>
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm animate-pulse">
+                <div className="h-3 bg-gray-200 rounded-md w-1/2 mb-4"></div>
+                <div className="h-8 bg-gray-200 rounded-md w-1/4"></div>
+              </div>
+            ))}
+          </>
+        ) : (
+          /* LE TUE VERE CARDS */
+          <>
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Utenti</p>
+              <p className="text-3xl font-black text-gray-800">{stats.utenti}</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Impianti</p>
+              <p className="text-3xl font-black text-emerald-700">{stats.parcheggi}</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Posti</p>
+              <p className="text-3xl font-black text-blue-700">{stats.posti}</p>
+            </div>
+            <div 
+              onClick={handleOpenBookings}
+              className="bg-emerald-50 p-6 rounded-2xl border border-emerald-200 shadow-sm hover:bg-emerald-100 hover:border-emerald-300 transition-all cursor-pointer group"
+            >
+              <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest mb-1">Soste Attive</p>
+              <div className="flex justify-between items-end">
+                <p className="text-3xl font-black text-emerald-900">{stats.attive}</p>
+                <span className="text-[10px] font-bold text-emerald-600 border border-emerald-200 px-2 py-1 rounded bg-white group-hover:border-emerald-400 transition-colors">GESTISCI</span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -435,7 +451,7 @@ export default function AdminDashboard({ profile }) {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredUtenti.map(utente => (
-                  <tr key={utente.idpersona} className="transition-colors hover:bg-gray-50">
+                  <tr key={utente.idpersona} className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50">
                     <td className="p-3">
                       <p className="font-bold text-gray-800">{utente.nome || 'Utente'} {utente.cognome || ''}</p>
                       <p className="text-[10px] text-gray-400 font-mono">ID: {String(utente.idpersona).substring(0, 8)}</p>
@@ -445,29 +461,32 @@ export default function AdminDashboard({ profile }) {
                       <span className="text-xs text-gray-400">{utente.citta || ''}</span>
                     </td>
                     <td className="p-3">
-                      <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase border ${
-                        utente.ruolo === 'admin' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                        'bg-gray-100 text-gray-600 border-gray-200'
-                      }`}>
-                        {utente.ruolo || 'user'}
-                      </span>
+                  <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase border transition-colors ${
+                    utente.ruolo === 'admin' 
+                      ? 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-gray-800 dark:text-purple-400 dark:border-purple-700' 
+                      : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'
+                  }`}>
+                    {utente.ruolo || 'user'}
+                  </span>
                     </td>
-<td className="p-3 text-center">
+                    <td className="p-3 text-center">
                       {utente.idpersona !== profile?.idpersona ? (
                         /* FIX ALLINEAMENTO: Usiamo una griglia fissa larga circa 200px */
                         <div className="grid grid-cols-2 gap-2 w-52 mx-auto">
                           
                           {/* SLOT SINISTRO: Rendi Admin (o spazio vuoto) */}
                           <div>
-                            {utente.ruolo !== 'admin' && (
-                              <button 
-                                onClick={() => handleMakeAdmin(utente)}
-                                className="w-full text-[10px] font-bold px-3 py-2 rounded-lg border text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 transition-all uppercase"
-                              >
-                                Rendi Admin
-                              </button>
-                            )}
-                          </div>
+                        {utente.ruolo !== 'admin' && (
+                          <button 
+                            onClick={() => handleMakeAdmin(utente)}
+                            className="w-full text-[10px] font-bold px-3 py-2 rounded-lg border uppercase transition-all
+                                      border-purple-600 text-purple-600 bg-transparent hover:bg-purple-50 
+                                      dark:border-purple-400 dark:text-purple-400 dark:hover:bg-purple-900/30"
+                          >
+                            Rendi Admin
+                          </button>
+                        )}
+                      </div>
 
                           {/* SLOT DESTRO: Elimina (o Conferma/Annulla) */}
                           <div>

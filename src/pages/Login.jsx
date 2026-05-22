@@ -20,7 +20,17 @@ export default function Login() {
     else navigate("/");
   };
 
-  // NUOVA FUNZIONE: Recupero Password integrato nella UI
+  // Funzione per il Login con Google
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) showMessage("Errore Google Login: " + error.message);
+  };
+
   const handleResetPassword = async () => {
     if (!email) {
       return showMessage("Inserisci la tua email nel campo qui sopra e clicca di nuovo su recupera password.", "info");
@@ -42,7 +52,6 @@ export default function Login() {
       <form onSubmit={handleLogin} className="bg-white p-10 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 flex flex-col relative">
         <h2 className="text-3xl mb-6 font-black text-center text-emerald-800">Bentornato</h2>
         
-        {/* AREA MESSAGGI DINAMICI */}
         {uiMessage.text && (
           <div className={`p-3 rounded-lg mb-6 text-sm font-bold text-center border ${
             uiMessage.type === 'success' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 
@@ -70,7 +79,6 @@ export default function Login() {
           onChange={e => setPassword(e.target.value)} 
         />
         
-        {/* LINK RECUPERO PASSWORD (Ora usa formNoValidate per non scatenare l'errore del campo password vuoto) */}
         <div className="flex justify-end mb-8">
           <button 
             type="button" 
@@ -82,11 +90,26 @@ export default function Login() {
         </div>
 
         <p className="mb-4 text-xs text-gray-500 leading-relaxed">
-          Questo è un progetto scolastico: non garantiamo la sicurezza completa dei dati. Pur essendo accessibile via HTTPS, l'app non è realizzata come servizio professionale e non dovrebbe gestire credenziali o informazioni sensibili.
-          Ai sensi dell’art. 32 GDPR e dell’art. 2-ter del D.Lgs. 196/2003, la tutela dei dati personali si applica, ma qui il sistema è implementato esclusivamente per finalità didattiche.
+          Questo è un progetto scolastico: non garantiamo la sicurezza completa dei dati.
         </p>
 
         <button type="submit" className="w-full bg-emerald-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-emerald-700 shadow-md transition">Accedi</button>
+
+        {/* Separatore Social */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-200"></span></div>
+          <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-gray-400 font-bold">Oppure</span></div>
+        </div>
+
+        {/* Bottone Google */}
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 font-bold py-3 px-4 rounded-xl hover:bg-gray-50 transition-all shadow-sm active:scale-95"
+        >
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+          Continua con Google
+        </button>
         
         <p className="mt-6 text-center text-sm text-gray-600">
           Nuovo utente? <Link to="/register" className="text-emerald-600 font-bold hover:underline">Registrati ora</Link>
