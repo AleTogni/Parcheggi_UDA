@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient';
 
 export const getUserProfile = async (authId) => {
   const { data, error } = await supabase
-    .from('PERSONA')
+    .from('PERSONE')
     .select('*')
     .eq('supabase_uuid', authId) // Il campo che hai appena aggiunto
     .single();

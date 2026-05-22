@@ -42,10 +42,10 @@ export default function Profile({ profile, refreshProfile, setDestinationParking
 
       // Sincronizzazione Realtime combinata (Veicoli + Storico)
       const profileChannel = supabase.channel(`profile-db-sync-${profile.idpersona}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'veicolo', filter: `idpersona=eq.${profile.idpersona}` }, () => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'veicoli', filter: `idpersona=eq.${profile.idpersona}` }, () => {
           loadVeicoli(); 
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'prenotazione', filter: `idpersona=eq.${profile.idpersona}` }, () => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'prenotazioni', filter: `idpersona=eq.${profile.idpersona}` }, () => {
           loadPrenotazioni(); 
         })
         .subscribe();
@@ -56,7 +56,7 @@ export default function Profile({ profile, refreshProfile, setDestinationParking
 
   async function loadVeicoli() {
     const { data } = await supabase
-      .from('veicolo')
+      .from('veicoli')
       .select('*')
       .eq('idpersona', profile.idpersona);
     setVeicoli(data || []);
@@ -64,8 +64,8 @@ export default function Profile({ profile, refreshProfile, setDestinationParking
 
 async function loadPrenotazioni() {
     const { data } = await supabase
-      .from('prenotazione')
-      .select('*, posto_auto(piano, idparcheggio, parcheggio(nome, latitudine, longitudine))') 
+      .from('prenotazioni')
+      .select('*, posti_auto(piano, idparcheggio, parcheggi(nome, latitudine, longitudine))') 
       .eq('idpersona', profile.idpersona)
       .order('orarioinizio', { ascending: false });
     setPrenotazioni(data || []);
@@ -84,7 +84,7 @@ async function loadPrenotazioni() {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
-    const { error } = await supabase.from('persona').update(form).eq('idpersona', profile.idpersona);
+    const { error } = await supabase.from('persone').update(form).eq('idpersona', profile.idpersona);
     if (error) showMessage("Errore salvataggio."); 
     else { 
       showMessage("Profilo aggiornato."); 
@@ -98,7 +98,7 @@ async function loadPrenotazioni() {
 
     if (editingTarga) {
       const { error } = await supabase
-        .from('veicolo')
+        .from('veicoli')
         .update({ targa: targaPulita, alimentazione })
         .eq('targa', editingTarga);
         
@@ -112,7 +112,7 @@ async function loadPrenotazioni() {
         await loadPrenotazioni();
       }
     } else {
-      const { error } = await supabase.from('veicolo').insert([{ 
+      const { error } = await supabase.from('veicoli').insert([{ 
         idpersona: profile.idpersona, 
         targa: targaPulita,
         alimentazione: alimentazione 
@@ -127,7 +127,7 @@ async function loadPrenotazioni() {
   const deleteVeicolo = async (targaToDelete) => {
     setVeicoli(prev => prev.filter(v => v.targa !== targaToDelete));
     
-    const { error } = await supabase.from('veicolo').delete().eq('targa', targaToDelete);
+    const { error } = await supabase.from('veicoli').delete().eq('targa', targaToDelete);
     if (error) {
       await loadVeicoli();
       showMessage("Impossibile eliminare: targa presente nello storico.");
@@ -144,8 +144,8 @@ async function loadPrenotazioni() {
   };
 
   const executeCancelBooking = async (pren) => {
-    await supabase.from('prenotazione').update({ stato: 'Annullata' }).eq('idprenotazione', pren.idprenotazione);
-    await supabase.from('posto_auto').update({ stato: 'Libero' }).eq('idposto', pren.idposto);
+    await supabase.from('prenotazioni').update({ stato: 'Annullata' }).eq('idprenotazione', pren.idprenotazione);
+    await supabase.from('posti_auto').update({ stato: 'Libero' }).eq('idposto', pren.idposto);
     if (setDestinationParking) setDestinationParking(null);
     loadPrenotazioni();
     showMessage("Sosta annullata.");
@@ -164,7 +164,7 @@ async function loadPrenotazioni() {
     const nuovaUscita = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
     const nuovoCosto = (parseFloat(pren.costo || 0) + tariffaOraria).toFixed(2);
 
-    const { error } = await supabase.from('prenotazione')
+    const { error } = await supabase.from('prenotazioni')
       .update({ 
         orariofine: nuovaUscita, 
         costo: nuovoCosto 
@@ -197,7 +197,7 @@ async function loadPrenotazioni() {
 
     const { error } = await supabase.from('recensioni').insert([{
       idprenotazione: reviewModal.idprenotazione,
-      idparcheggio: reviewModal.posto_auto.idparcheggio,
+      idparcheggio: reviewModal.posti_auto.idparcheggio,
       idpersona: profile.idpersona,
       voto: reviewForm.voto,
       testo: reviewForm.testo
@@ -364,10 +364,10 @@ async function loadPrenotazioni() {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <span className="font-black text-gray-800 text-lg block">
-                          {p.posto_auto?.parcheggio?.nome || 'Parcheggio'}
+                          {p.posti_auto?.parcheggi?.nome || 'Parcheggio'}
                         </span>
                         <span className="font-mono text-xs text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded mt-1 inline-block">
-                          {p.targa} • {p.posto_auto?.piano}
+                          {p.targa} • {p.posti_auto?.piano}
                         </span>
                       </div>
                       <span className={`text-[10px] uppercase px-2 py-1 rounded font-bold border ${
@@ -403,9 +403,9 @@ async function loadPrenotazioni() {
                         <button 
                           onClick={() => {
                             const park = {
-                              nome: p.posto_auto.parcheggio.nome,
-                              latitudine: p.posto_auto.parcheggio.latitudine,
-                              longitudine: p.posto_auto.parcheggio.longitudine
+                              nome: p.posti_auto.parcheggi.nome,
+                              latitudine: p.posti_auto.parcheggi.latitudine,
+                              longitudine: p.posti_auto.parcheggi.longitudine
                             };
                             setDestinationParking(park);
                             navigate('/');
@@ -467,7 +467,7 @@ async function loadPrenotazioni() {
             <button onClick={() => setReviewModal(null)} className="absolute top-4 right-4 text-2xl font-bold text-gray-300 hover:text-gray-800 transition-colors">&times;</button>
             
             <h2 className="text-2xl font-black text-gray-900 mb-1">Com'è andata?</h2>
-            <p className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-widest">{reviewModal.posto_auto?.parcheggio?.nome}</p>
+            <p className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-widest">{reviewModal.posti_auto?.parcheggi?.nome}</p>
 
             {/* Selettore Stelle */}
             <div className="flex justify-center gap-2 mb-6">

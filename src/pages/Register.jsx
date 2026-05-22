@@ -19,7 +19,7 @@ export default function Register() {
     if (authError) return showMessage("Errore: " + authError.message);
 
     if (data.user) {
-      const { error: dbError } = await supabase.from('persona').insert([{ 
+      const { error: dbError } = await supabase.from('persone').insert([{ 
         supabase_uuid: data.user.id, 
         email: form.email, 
         nome: form.nome,

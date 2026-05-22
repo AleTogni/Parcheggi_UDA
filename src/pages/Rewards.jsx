@@ -46,7 +46,7 @@ export default function Rewards({ profile, refreshProfile }) {
     setLoading(true);
     
     const { error: updateError } = await supabase
-      .from('persona')
+      .from('persone')
       .update({ punti_accumulati: punti - totalCost })
       .eq('idpersona', profile.idpersona);
 

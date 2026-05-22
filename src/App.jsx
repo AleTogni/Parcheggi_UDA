@@ -43,7 +43,7 @@ export default function App() {
         { 
           event: 'UPDATE', 
           schema: 'public', 
-          table: 'persona', 
+          table: 'persone', 
           filter: `idpersona=eq.${profile.idpersona}` 
         }, 
         (payload) => {
@@ -57,7 +57,7 @@ export default function App() {
 
   async function fetchProfile(uuid, retries = 4) {
     const { data } = await supabase
-      .from('persona')
+      .from('persone')
       .select('*')
       .eq('supabase_uuid', uuid)
       .maybeSingle();

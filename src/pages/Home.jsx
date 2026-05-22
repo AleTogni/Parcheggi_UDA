@@ -95,18 +95,18 @@ export default function Home({ profile, destinationParking, setDestinationParkin
     if (profile) loadUserVehicles();
     const channel = supabase
       .channel('db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posto_auto' }, () => loadData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'prenotazione' }, () => loadData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posti_auto' }, () => loadData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'prenotazioni' }, () => loadData())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [profile]);
 
 const loadData = async () => {
-    const { data: pData } = await supabase.from('parcheggio').select('*');
-    const { data: postiData } = await supabase.from('posto_auto').select('*');
+    const { data: pData } = await supabase.from('parcheggi').select('*');
+    const { data: postiData } = await supabase.from('posti_auto').select('*');
     // SCARICHIAMO LE RECENSIONI CON IL NOME DELL'UTENTE
-    const { data: recData } = await supabase.from('recensioni').select('*, persona(nome)');
-    const { count: activeCount } = await supabase.from('prenotazione').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
+    const { data: recData } = await supabase.from('recensioni').select('*, persone(nome)');
+    const { count: activeCount } = await supabase.from('prenotazioni').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
     
     if (!pData) return;
 
@@ -144,7 +144,7 @@ const loadData = async () => {
   };
 
   const loadUserVehicles = async () => {
-    const { data } = await supabase.from('veicolo').select('*').eq('idpersona', profile.idpersona);
+    const { data } = await supabase.from('veicoli').select('*').eq('idpersona', profile.idpersona);
     const validVehicles = data || [];
     setUserVehicles(validVehicles);
     if (validVehicles.length > 0) setSelectedTarga(validVehicles[0].targa);
@@ -207,16 +207,16 @@ const loadData = async () => {
       return showInternalMessage("Questo stallo è riservato esclusivamente a veicoli elettrici.");
     }
     if (selectedTarga === 'manuale') {
-      await supabase.from('veicolo').upsert([{ idpersona: profile.idpersona, targa: targaFinale, alimentazione: 'Termica' }], { onConflict: 'targa' });
+      await supabase.from('veicoli').upsert([{ idpersona: profile.idpersona, targa: targaFinale, alimentazione: 'Termica' }], { onConflict: 'targa' });
     }
     const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const { error: errPren } = await supabase.from('prenotazione').insert([{
+    const { error: errPren } = await supabase.from('prenotazioni').insert([{
       idpersona: profile.idpersona, targa: targaFinale, idposto: bookingSpot.idposto,
       codiceaccesso: accessCode, orarioinizio: bookingStart, orariofine: bookingEnd,
       stato: 'Attiva', costo: preventivo
     }]);
     if (errPren) return showInternalMessage("Errore: " + errPren.message);
-    await supabase.from('posto_auto').update({ stato: 'Occupato' }).eq('idposto', bookingSpot.idposto);
+    await supabase.from('posti_auto').update({ stato: 'Occupato' }).eq('idposto', bookingSpot.idposto);
     try {
       await supabase.functions.invoke('send-confirmation-email', {
         body: { email: profile.email, nome: profile.nome, codiceAccesso: accessCode, parcheggio: modalData.nome }
@@ -227,7 +227,7 @@ const loadData = async () => {
     const tipoAlimentazione = veicoloSelezionato ? veicoloSelezionato.alimentazione : 'Termica';
     const puntiGuadagnati = calcolaPuntiSosta(bookingStart, bookingEnd, tipoAlimentazione);
     const { error: pError } = await supabase
-    .from('persona')
+    .from('persone')
     .update({ punti_accumulati: (profile.punti_accumulati || 0) + puntiGuadagnati })
     .eq('idpersona', profile.idpersona);
 
@@ -501,7 +501,7 @@ const closeModal = () => {
                   modalData.listaRecensioni?.map(r => (
                     <div key={r.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="font-black text-xs text-emerald-900 uppercase">{r.persona?.nome || 'Utente anonimo'}</span>
+                        <span className="font-black text-xs text-emerald-900 uppercase">{r.persone?.nome || 'Utente anonimo'}</span>
                         <RenderStars rating={r.voto} />
                       </div>
                       <p className="text-sm text-gray-600 italic leading-relaxed">"{r.testo || 'Nessun commento scritto'}"</p>

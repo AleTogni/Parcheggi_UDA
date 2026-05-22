@@ -29,13 +29,13 @@ export default function AdminDashboard({ profile }) {
   useEffect(() => { loadDashboardData(); }, [chartView]);
 
   const loadDashboardData = async () => {
-    const { count: u, data: utentiData } = await supabase.from('persona').select('*', { count: 'exact' });
-    const { count: po } = await supabase.from('posto_auto').select('*', { count: 'exact', head: true });
-    const { count: at } = await supabase.from('prenotazione').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
-    const { count: val } = await supabase.from('prenotazione').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
-    const { data: p } = await supabase.from('parcheggio').select('*').order('nome');
+    const { count: u, data: utentiData } = await supabase.from('persone').select('*', { count: 'exact' });
+    const { count: po } = await supabase.from('posti_auto').select('*', { count: 'exact', head: true });
+    const { count: at } = await supabase.from('prenotazioni').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
+    const { count: val } = await supabase.from('prenotazioni').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
+    const { data: p } = await supabase.from('parcheggi').select('*').order('nome');
     
-    const { data: allPreno } = await supabase.from('prenotazione').select('orarioinizio, costo');
+    const { data: allPreno } = await supabase.from('prenotazioni').select('orarioinizio, costo');
     if (allPreno) {
       setChartData(processDataForChart(allPreno, chartView));
     }
@@ -105,9 +105,9 @@ export default function AdminDashboard({ profile }) {
   };
 
   const handleOpenBookings = async () => {
-    const { data: preno } = await supabase.from('prenotazione').select('*').order('orarioinizio', { ascending: false });
-    const { data: posti } = await supabase.from('posto_auto').select('*');
-    const { data: parkings } = await supabase.from('parcheggio').select('*');
+    const { data: preno } = await supabase.from('prenotazioni').select('*').order('orarioinizio', { ascending: false });
+    const { data: posti } = await supabase.from('posti_auto').select('*');
+    const { data: parkings } = await supabase.from('parcheggii').select('*');
 
     if (preno && posti && parkings) {
       const enriched = preno.map(p => {
@@ -115,7 +115,7 @@ export default function AdminDashboard({ profile }) {
         const parking = posto ? parkings.find(park => park.idparcheggio === posto.idparcheggio) : null;
         return {
            ...p,
-           nomeParcheggio: parking ? parking.nome : 'Sconosciuto',
+           nomeParcheggi: parking ? parking.nome : 'Sconosciuto',
            idparcheggio: parking ? parking.idparcheggio : null,
            pianoPosto: posto ? posto.piano : 'N/A'
         };
@@ -126,8 +126,8 @@ export default function AdminDashboard({ profile }) {
   };
 
   const executeAdminCancelBooking = async (pren) => {
-    await supabase.from('prenotazione').update({ stato: 'Annullata' }).eq('idprenotazione', pren.idprenotazione);
-    await supabase.from('posto_auto').update({ stato: 'Libero' }).eq('idposto', pren.idposto);
+    await supabase.from('prenotazioni').update({ stato: 'Annullata' }).eq('idprenotazione', pren.idprenotazione);
+    await supabase.from('posti_auto').update({ stato: 'Libero' }).eq('idposto', pren.idposto);
     setConfirmCancelId(null);
     showMessage("Sosta terminata forzatamente.");
     loadDashboardData();
@@ -143,7 +143,7 @@ export default function AdminDashboard({ profile }) {
       return [
         p.idprenotazione,
         p.targa,
-        `"${p.nomeParcheggio}"`,
+        `"${p.nomeParcheggi}"`,
         `"${p.pianoPosto}"`,
         formattaData(p.orarioinizio).replace(/,/g, ''),
         formattaData(p.orariofine).replace(/,/g, ''),
@@ -165,7 +165,7 @@ export default function AdminDashboard({ profile }) {
   };
 
   const handleMakeAdmin = async (utente) => {
-    const { error } = await supabase.from('persona').update({ ruolo: 'admin' }).eq('idpersona', utente.idpersona);
+    const { error } = await supabase.from('persone').update({ ruolo: 'admin' }).eq('idpersona', utente.idpersona);
     if (error) {
       showMessage("Errore durante la promozione ad Admin.");
     } else {
@@ -189,7 +189,7 @@ export default function AdminDashboard({ profile }) {
 
   const handleAddParking = async (e) => {
     e.preventDefault();
-    const { error } = await supabase.from('parcheggio').insert([newParking]);
+    const { error } = await supabase.from('parcheggi').insert([newParking]);
     if (error) showMessage("Errore database: " + error.message);
     else { 
       showMessage("Impianto creato."); 
@@ -200,7 +200,7 @@ export default function AdminDashboard({ profile }) {
 
   const handleAddSpot = async (e) => {
     e.preventDefault();
-    const { error } = await supabase.from('posto_auto').insert([newSpot]);
+    const { error } = await supabase.from('posti_auto').insert([newSpot]);
     if (error) showMessage("Errore database.");
     else { 
       showMessage("Stallo aggiunto."); 
@@ -587,7 +587,7 @@ export default function AdminDashboard({ profile }) {
                           'bg-gray-200 text-gray-500 border-gray-300'
                         }`}>{pren.stato}</span>
                       </div>
-                      <p className="text-xs font-bold text-gray-500 uppercase">{pren.nomeParcheggio} • Stallo {pren.pianoPosto}</p>
+                      <p className="text-xs font-bold text-gray-500 uppercase">{pren.nomeParcheggi} • Stallo {pren.pianoPosto}</p>
                       <p className="text-[10px] text-gray-400 mt-1">{formattaData(pren.orarioinizio)} &rarr; {formattaData(pren.orariofine)}</p>
                     </div>
                     {pren.stato === 'Attiva' && (
