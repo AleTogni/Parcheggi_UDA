@@ -1,6 +1,6 @@
 # Brescia Green Park
 
-[![Live Demo](https://img.shields.io/badge/Demo-Live_su_Netlify-success?style=for-the-badge)](https://parcheggiuda.netlify.app)
+[![Live Demo](https://img.shields.io/badge/Demo-Live_su_Netlify-success?style=for-the-badge)](https://bresciagreenpark.netlify.app)
 
 Brescia Green Park è una piattaforma web avanzata progettata per la gestione intelligente della sosta urbana. Il progetto nasce come Minimum Viable Product (MVP) con l'obiettivo di ottimizzare l'uso degli spazi di parcheggio cittadini e promuovere attivamente la mobilità sostenibile attraverso un sistema integrato di incentivi digitali e gamification.
 
