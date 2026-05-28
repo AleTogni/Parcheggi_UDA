@@ -62,7 +62,7 @@ export default function Home({ profile, destinationParking, setDestinationParkin
     "Abbiamo finito i token per generare le risposte AI, ti chiediamo di contattare l'assistenza."
   ];
 
-  const assistantPhoto = '/shared image.jpg';
+  const assistantPhoto = '/shared image.png';
 
   const handleSendMessage = () => {
     if (!userInput.trim()) return;
