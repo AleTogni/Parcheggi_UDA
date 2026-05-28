@@ -52,50 +52,49 @@ Il progetto è partito dalla definizione dei requisiti e da una fase di ideazion
 
 ## Requisiti funzionali
 
-### Autenticazione e gestione utenti
+### $${\color{lightblue}Autenticazione \ e \ gestione \ utenti}$$
 
 - Registrazione tramite email e password, o in alternativa tramite Google OAuth.
 - Login, recupero password via email e aggiornamento della password dalla pagina dedicata.
 - La sessione rimane attiva tra i refresh della pagina.
 - Gli utenti con ruolo `admin` hanno accesso all'area riservata; tutti gli altri vengono reindirizzati.
 
-### Visualizzazione parcheggi
+### $${\color{lightblue}Visualizzazione \ parcheggi}$$
 
 - Mappa interattiva (Leaflet/OpenStreetMap) con tutti i parcheggi disponibili.
-- I marker cambiano colore in base alla saturazione: verde = libero, blu = parziale, rosso = pieno.
 - La ZTL è evidenziata come area poligonale sulla mappa.
 - Filtri per nome, stalli disabili e colonnine elettriche; ordinamento per posti liberi o alfabetico.
 - Disponibilità aggiornata in tempo reale via WebSocket, senza bisogno di ricaricare la pagina.
 - Valutazione media a stelle (1–5) visibile per ogni parcheggio.
 - Su mobile, vista a tab tra "Mappa" e "Lista".
 
-### Navigazione GPS
+### $${\color{lightblue}Navigazione \ GPS}$$
 
 - Pulsante sulla mappa per rilevare la posizione GPS dell'utente.
 - Calcolo e visualizzazione del percorso stradale verso il parcheggio scelto (Leaflet Routing Machine), tracciato in verde e con zoom automatico.
 
-### Prenotazione stalli
+### $${\color{lightblue}Prenotazione \ stalli}$$
 
 - Selezione dello stallo con piano e tipologia indicati; associazione a un veicolo salvato o a una targa inserita manualmente.
 - Calendario interattivo localizzato in italiano per scegliere data e ora di arrivo/uscita.
-- Preventivo visibile prima della conferma (€2,00/ora).
+- Preventivo visibile prima della conferma (**€2,00/ora**).
 - Alla conferma lo stallo passa a `Occupato` e la prenotazione viene registrata.
-- Al termine della sosta i punti EcoPoints vengono aggiornati, con bonus +20% per veicoli elettrici.
+- Al termine della sosta i punti EcoPoints vengono aggiornati, con **bonus +20%** per veicoli elettrici.
 
-### Profilo utente
+### $${\color{lightblue}Profilo \ utente}$$
 
 - Modifica dei dati anagrafici (nome, cognome, telefono) e gestione anagrafica veicoli (aggiunta ed eliminazione targhe).
 - Storico prenotazioni con data, parcheggio, costo e punti guadagnati.
 - Possibilità di lasciare una recensione a stelle per un parcheggio utilizzato.
 - Navigazione GPS avviabile direttamente da una prenotazione nello storico.
 
-### Gamification (EcoPoints)
+### $${\color{lightblue}Gamification \ (EcoPoints)}$$
 
-- 10 punti per ogni ora di sosta completata, con moltiplicatore ×1,2 per i veicoli elettrici.
+- **10 punti** per ogni ora di sosta completata, con moltiplicatore **×1,2** per i veicoli elettrici.
 - Pagina dedicata con saldo punti e catalogo premi riscattabili (con selezione della quantità).
 - Il riscatto viene bloccato con messaggio di errore se i punti non sono sufficienti.
 
-### Dashboard amministratore
+### $${\color{lightblue}Dashboard \ amministratore}$$
 
 - Metriche principali in tempo reale: utenti registrati, parcheggi attivi, stalli totali e soste in corso.
 - Grafici interattivi su andamento soste e risparmio CO₂ stimato (settimana / mese / anno).
@@ -103,7 +102,7 @@ Il progetto è partito dalla definizione dei requisiti e da una fase di ideazion
 - Registro prenotazioni filtrabile per parcheggio e per stato (attive / storico), con terminazione forzata delle soste e export CSV.
 - Lista utenti con ricerca, filtro per ruolo, promozione ad admin ed eliminazione con conferma a doppio step.
 
-### Interfaccia
+### $${\color{lightblue}Interfaccia}$$
 
 - Tema chiaro e scuro con preferenza salvata nel browser.
 - Assistente virtuale (chatbot) accessibile tramite pulsante FAB fisso.
@@ -113,39 +112,39 @@ Il progetto è partito dalla definizione dei requisiti e da una fase di ideazion
 
 ## Requisiti non funzionali
 
-### Prestazioni
+### $${\color{orange}Prestazioni}$$
 
 - Il caricamento iniziale deve avvenire in meno di 3 secondi su connessione ≥10 Mbps.
 - Gli aggiornamenti realtime degli stalli devono riflettersi nell'interfaccia entro 1 secondo.
 - Il calcolo del preventivo avviene lato client, senza chiamate al server.
 
-### Usabilità
+### $${\color{orange}Usabilità}$$
 
 - Interfaccia responsiva e usabile da viewport a partire da 320px.
 - Il flusso di prenotazione non richiede più di 5 interazioni.
 - I feedback (conferme, errori) vengono comunicati tramite toast visibili almeno 4 secondi.
 - Il cambio tema avviene senza flash, con transizioni CSS ≤300ms.
 
-### Sicurezza
+### $${\color{orange}Sicurezza}$$
 
 - Tutte le comunicazioni avvengono tramite HTTPS/TLS.
 - Le chiavi API sono gestite tramite variabili d'ambiente, mai hardcodate nel codice.
 - La rotta `/admin` è protetta: non autenticati vengono rimandati al login, gli utenti senza ruolo admin alla home.
 - La gestione delle sessioni si affida interamente a Supabase Auth.
 
-### Affidabilità
+### $${\color{orange}Affidabilità}$$
 
 - Il recupero del profilo ritenta automaticamente fino a 4 volte (intervallo 500ms) per gestire ritardi post-registrazione.
 - La sincronizzazione del profilo usa i canali Realtime per garantire consistenza tra sessioni diverse.
 - In caso di errore durante riscatto o prenotazione, viene mostrato un messaggio senza modificare parzialmente il database.
 
-### Manutenibilità
+### $${\color{orange}Manutenibilità}$$
 
 - Codice organizzato per responsabilità: `/pages`, `/components`, `/utils`, `/context`, `/api`.
 - La logica dei punti (tariffe e moltiplicatori) è centralizzata in `gamification.js`.
 - Il client Supabase è istanziato una sola volta in `supabaseClient.js`.
 
-### Compatibilità
+### $${\color{orange}Compatibilità}$$
 
 - Compatibile con le ultime versioni stabili di Chrome, Firefox, Safari ed Edge.
 - La mappa funziona su touch con zoom e pan nativi.
