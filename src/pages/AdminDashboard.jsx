@@ -30,6 +30,7 @@ export default function AdminDashboard({ profile }) {
   useEffect(() => { loadDashboardData(); }, [chartView]);
 
   const loadDashboardData = async () => {
+    // Nomi tabelle corretti in base al tuo schema SQL ufficiale
     const { count: u, data: utentiData } = await supabase.from('persone').select('*', { count: 'exact' });
     const { count: po } = await supabase.from('posti_auto').select('*', { count: 'exact', head: true });
     const { count: at } = await supabase.from('prenotazioni').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
@@ -109,7 +110,7 @@ export default function AdminDashboard({ profile }) {
   const handleOpenBookings = async () => {
     const { data: preno } = await supabase.from('prenotazioni').select('*').order('orarioinizio', { ascending: false });
     const { data: posti } = await supabase.from('posti_auto').select('*');
-    const { data: parkings } = await supabase.from('parcheggii').select('*');
+    const { data: parkings } = await supabase.from('parcheggi').select('*');
 
     if (preno && posti && parkings) {
       const enriched = preno.map(p => {
@@ -243,7 +244,6 @@ export default function AdminDashboard({ profile }) {
 
 <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {isLoading ? (
-          /* SKELETON CARDS */
           <>
             {[1, 2, 3, 4].map((n) => (
               <div key={n} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm animate-pulse">
@@ -253,7 +253,6 @@ export default function AdminDashboard({ profile }) {
             ))}
           </>
         ) : (
-          /* LE TUE VERE CARDS */
           <>
             <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Utenti</p>
@@ -390,7 +389,8 @@ export default function AdminDashboard({ profile }) {
           </div>
         </div>
         
-        <div className="h-[300px] w-full">
+        {/* FIX GRAFICO: Altezza fissa */}
+        <div className="h-80 w-full min-h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
@@ -408,7 +408,6 @@ export default function AdminDashboard({ profile }) {
         </div>
       </div>
 
-      {/* SEZIONE: TABELLA GESTIONE UTENTI (CON SCROLLBAR E FILTRI E ALTEZZA FISSA) */}
       <div className="bg-white pt-8 pb-4 rounded-3xl border border-gray-200 shadow-sm mb-8 overflow-hidden">
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center px-8 mb-6 border-b border-gray-100 pb-4 gap-4">
@@ -437,7 +436,6 @@ export default function AdminDashboard({ profile }) {
           </div>
         </div>
         
-        {/* FIX ALTEZZA: h-[400px] forza un'altezza fissa, evitando che la pagina salti su e giù */}
         <div className="overflow-x-auto overflow-y-auto h-[400px] custom-scrollbar px-3 sm:px-8 relative">
           {filteredUtenti.length > 0 ? (
             <table className="w-full min-w-[600px] text-left border-collapse relative">
@@ -451,7 +449,7 @@ export default function AdminDashboard({ profile }) {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredUtenti.map(utente => (
-                  <tr key={utente.idpersona} className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <tr key={utente.idpersona} className="transition-colors hover:bg-gray-50">
                     <td className="p-3">
                       <p className="font-bold text-gray-800">{utente.nome || 'Utente'} {utente.cognome || ''}</p>
                       <p className="text-[10px] text-gray-400 font-mono">ID: {String(utente.idpersona).substring(0, 8)}</p>
@@ -463,32 +461,26 @@ export default function AdminDashboard({ profile }) {
                     <td className="p-3">
                   <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase border transition-colors ${
                     utente.ruolo === 'admin' 
-                      ? 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-gray-800 dark:text-purple-400 dark:border-purple-700' 
-                      : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'
+                      ? 'bg-purple-100 text-purple-800 border-purple-200' 
+                      : 'bg-gray-100 text-gray-600 border-gray-200'
                   }`}>
                     {utente.ruolo || 'user'}
                   </span>
                     </td>
                     <td className="p-3 text-center">
                       {utente.idpersona !== profile?.idpersona ? (
-                        /* FIX ALLINEAMENTO: Usiamo una griglia fissa larga circa 200px */
                         <div className="grid grid-cols-2 gap-2 w-52 mx-auto">
-                          
-                          {/* SLOT SINISTRO: Rendi Admin (o spazio vuoto) */}
                           <div>
                         {utente.ruolo !== 'admin' && (
                           <button 
                             onClick={() => handleMakeAdmin(utente)}
                             className="w-full text-[10px] font-bold px-3 py-2 rounded-lg border uppercase transition-all
-                                      border-purple-600 text-purple-600 bg-transparent hover:bg-purple-50 
-                                      dark:border-purple-400 dark:text-purple-400 dark:hover:bg-purple-900/30"
+                                      border-purple-600 text-purple-600 bg-transparent hover:bg-purple-50"
                           >
                             Rendi Admin
                           </button>
                         )}
                       </div>
-
-                          {/* SLOT DESTRO: Elimina (o Conferma/Annulla) */}
                           <div>
                             {confirmDeleteUserId === utente.idpersona ? (
                               <div className="flex gap-1 animate-in fade-in zoom-in duration-200">
@@ -514,7 +506,6 @@ export default function AdminDashboard({ profile }) {
                               </button>
                             )}
                           </div>
-                          
                         </div>
                       ) : (
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 px-3 py-1 rounded-lg">Il tuo account</span>
@@ -534,21 +525,13 @@ export default function AdminDashboard({ profile }) {
         </div>
       </div>
 
-      {/* MODALE REGISTRO PRENOTAZIONI */}
       {showBookingsModal && (
         <div onClick={() => setShowBookingsModal(false)} className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] cursor-pointer">
           <div onClick={e => e.stopPropagation()} className="bg-white p-4 sm:p-8 rounded-3xl max-w-4xl w-full shadow-2xl relative cursor-default flex flex-col max-h-[90vh]">
-            
             <div className="flex flex-col gap-3 border-b border-gray-100 pb-4 mb-4">
               <h2 className="text-2xl font-black text-gray-900">Registro Prenotazioni</h2>
-              
-              {/* CONTENITORE PRINCIPALE: justify-between e items-start (o center) */}
               <div className="flex flex-row items-center justify-between w-full gap-2 sm:gap-4">
-                
-                {/* GRUPPO DI SINISTRA: Permette il wrap interno dei filtri senza spostare la X */}
                 <div className="flex flex-wrap items-center gap-3 sm:gap-4 flex-1">
-                  
-                  {/* Select Focus */}
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden xs:inline">Focus:</span>
                     <select 
@@ -562,30 +545,13 @@ export default function AdminDashboard({ profile }) {
                       ))}
                     </select>
                   </div>
-
-                  {/* Tabs Switch */}
                   <div className="flex bg-gray-100 p-1 rounded-lg shrink-0">
                     <button onClick={() => setActiveTab('attive')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'attive' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>In corso</button>
                     <button onClick={() => setActiveTab('storico')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'storico' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500'}`}>Storico</button>
                   </div>
-
-                  {/* Bottone CSV */}
-                  <button 
-                    onClick={handleExportCSV} 
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm transition-all shrink-0"
-                  >
-                    esporta CSV
-                  </button>
+                  <button onClick={handleExportCSV} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm transition-all shrink-0">esporta CSV</button>
                 </div>
-
-                {/* PULSANTE A DESTRA: shrink-0 impedisce alla X di rimpicciolirsi o spostarsi */}
-                <button 
-                  onClick={() => setShowBookingsModal(false)} 
-                  className="text-3xl font-bold text-gray-300 hover:text-gray-600 transition-colors leading-none p-2 shrink-0"
-                  aria-label="Chiudi"
-                >
-                  &times;
-                </button>
+                <button onClick={() => setShowBookingsModal(false)} className="text-3xl font-bold text-gray-300 hover:text-gray-600 transition-colors leading-none p-2 shrink-0">&times;</button>
               </div>
             </div>
 
