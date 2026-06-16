@@ -2,9 +2,9 @@ import { supabase } from './supabaseClient';
 
 export const getUserProfile = async (authId) => {
   const { data, error } = await supabase
-    .from('PERSONE')
+    .from('persone')
     .select('*')
-    .eq('supabase_uuid', authId) // Il campo che hai appena aggiunto
+    .eq('supabase_uuid', authId)
     .single();
   
   if (error) console.error("Errore profilo:", error);
