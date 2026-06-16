@@ -33,7 +33,7 @@ export default function AdminDashboard({ profile }) {
     // Nomi tabelle corretti in base al tuo schema SQL ufficiale
     const { count: u, data: utentiData } = await supabase.from('persone').select('*', { count: 'exact' });
     const { count: po } = await supabase.from('posti_auto').select('*', { count: 'exact', head: true });
-    const { count: at } = await supabase.from('prenotazioni').select('*', { count: 'exact', head: true });
+    const { count: at } = await supabase.from('prenotazioni').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
     const { count: val } = await supabase.from('prenotazioni').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
     const { data: p } = await supabase.from('parcheggi').select('*').order('nome');
     
@@ -107,26 +107,24 @@ export default function AdminDashboard({ profile }) {
     return d.toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
   };
 
-const handleOpenBookings = async () => {
-    // Scarichiamo SOLO le prenotazioni, senza join complicati
-    const { data: preno, error } = await supabase
+  const handleOpenBookings = async () => {
+  try {
+    // Usiamo l'istanza importata che ha già le chiavi dentro
+    const { data, error } = await supabase
       .from('prenotazioni')
       .select('*')
       .order('orarioinizio', { ascending: false });
 
-    if (error) {
-      console.error("Errore database:", error);
-      showMessage("Errore nel caricamento soste");
-      return;
-    }
+    if (error) throw error;
 
-    // Se arriviamo qui, vediamo cosa c'è in 'preno'
-    console.log("Dati ricevuti da Supabase:", preno); 
-    
-    // Mostriamo subito i dati grezzi
-    setAllBookingsData(preno || []);
+    console.log("Dati caricati:", data);
+    setAllBookingsData(data || []);
     setShowBookingsModal(true);
-  };
+  } catch (err) {
+    console.error("Errore fatale:", err.message);
+    alert("Errore di connessione: " + err.message);
+  }
+};
 
   const executeAdminCancelBooking = async (pren) => {
     await supabase.from('prenotazioni').update({ stato: 'Annullata' }).eq('idprenotazione', pren.idprenotazione);
