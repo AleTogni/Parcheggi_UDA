@@ -107,24 +107,24 @@ export default function AdminDashboard({ profile }) {
     return d.toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
   };
 
-  const handleOpenBookings = async () => {
-    const { data: preno } = await supabase.from('prenotazioni').select('*').order('orarioinizio', { ascending: false });
-    const { data: posti } = await supabase.from('posti_auto').select('*');
-    const { data: parkings } = await supabase.from('parcheggi').select('*');
+const handleOpenBookings = async () => {
+    // Scarichiamo SOLO le prenotazioni, senza join complicati
+    const { data: preno, error } = await supabase
+      .from('prenotazioni')
+      .select('*')
+      .order('orarioinizio', { ascending: false });
 
-    if (preno && posti && parkings) {
-      const enriched = preno.map(p => {
-        const posto = posti.find(pos => pos.idposto === p.idposto);
-        const parking = posto ? parkings.find(park => park.idparcheggio === posto.idparcheggio) : null;
-        return {
-           ...p,
-           nomeParcheggi: parking ? parking.nome : 'Sconosciuto',
-           idparcheggio: parking ? parking.idparcheggio : null,
-           pianoPosto: posto ? posto.piano : 'N/A'
-        };
-      });
-      setAllBookingsData(enriched);
+    if (error) {
+      console.error("Errore database:", error);
+      showMessage("Errore nel caricamento soste");
+      return;
     }
+
+    // Se arriviamo qui, vediamo cosa c'è in 'preno'
+    console.log("Dati ricevuti da Supabase:", preno); 
+    
+    // Mostriamo subito i dati grezzi
+    setAllBookingsData(preno || []);
     setShowBookingsModal(true);
   };
 
