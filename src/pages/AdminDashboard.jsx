@@ -33,7 +33,7 @@ export default function AdminDashboard({ profile }) {
     // Nomi tabelle corretti in base al tuo schema SQL ufficiale
     const { count: u, data: utentiData } = await supabase.from('persone').select('*', { count: 'exact' });
     const { count: po } = await supabase.from('posti_auto').select('*', { count: 'exact', head: true });
-    const { count: at } = await supabase.from('prenotazioni').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
+    const { count: at } = await supabase.from('prenotazioni').select('*', { count: 'exact', head: true });
     const { count: val } = await supabase.from('prenotazioni').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
     const { data: p } = await supabase.from('parcheggi').select('*').order('nome');
     
