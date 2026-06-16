@@ -1,14 +1,23 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../api/supabaseClient';
 
 const ThemeContext = createContext();
 
-export function ThemeProvider({ children }) {
-  // Inizializza il tema leggendo da localStorage o preferenza di sistema
+export function ThemeProvider({ children, profile }) {
+  // 1. Inizializza leggendo dal database se disponibile, altrimenti fallback su localStorage
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('theme') || 'light';
+    return profile?.tema || localStorage.getItem('theme') || 'light';
   });
   const [saving, setSaving] = useState(false);
 
+  // Aggiorna quando il profilo cambia (es. dopo il caricamento iniziale)
+  useEffect(() => {
+    if (profile?.tema) {
+      setTheme(profile.tema);
+    }
+  }, [profile?.tema]);
+
+  // Applica il tema al DOM
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
@@ -21,8 +30,21 @@ export function ThemeProvider({ children }) {
 
   const toggleTheme = async () => {
     setSaving(true);
-    // Simuliamo un piccolo delay se necessario, altrimenti cambia subito
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    
+    // Aggiorna stato locale
+    setTheme(newTheme);
+
+    // Aggiorna Database solo se l'utente è loggato
+    if (profile?.idpersona) {
+      const { error } = await supabase
+        .from('persone')
+        .update({ tema: newTheme })
+        .eq('idpersona', profile.idpersona);
+      
+      if (error) console.error("Errore salvataggio tema nel DB:", error);
+    }
+    
     setSaving(false);
   };
 
@@ -33,11 +55,8 @@ export function ThemeProvider({ children }) {
   );
 }
 
-// Questa è l'esportazione nominata che mancava
 export function useTheme() {
   const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme deve essere usato all\'interno di un ThemeProvider');
-  }
+  if (!context) throw new Error('useTheme deve essere usato all\'interno di un ThemeProvider');
   return context;
 }
