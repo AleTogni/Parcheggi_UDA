@@ -106,7 +106,7 @@ const loadData = async () => {
     const { data: pData } = await supabase.from('parcheggi').select('*');
     const { data: postiData } = await supabase.from('posti_auto').select('*');
     // SCARICHIAMO LE RECENSIONI CON IL NOME DELL'UTENTE
-    const { data: recData } = await supabase.from('recensioni').select('*, persone(nome)');
+    const { data: recData } = await supabase.from('recensioni').select('*');
     const { count: activeCount } = await supabase.from('prenotazioni').select('*', { count: 'exact', head: true }).eq('stato', 'Attiva');
     
     if (!pData) return;
