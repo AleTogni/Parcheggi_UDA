@@ -54,6 +54,26 @@ export default function Profile({ profile, refreshProfile, setDestinationParking
     }
   }, [profile]);
 
+  // --- ROBOTTINO IN BACKGROUND ---
+  // Controlla ogni 10 secondi se una sosta a schermo è appena scaduta
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      
+      // Verifica se nello stato attuale c'è una sosta attiva con tempo superato
+      const sostaScaduta = prenotazioni.some(
+        p => p.stato === 'Attiva' && now > new Date(p.orariofine)
+      );
+
+      // Se ne becca una, risveglia la funzione principale per chiuderla sul DB!
+      if (sostaScaduta) {
+        loadPrenotazioni(); 
+      }
+    }, 10000); // 10 secondi
+
+    return () => clearInterval(timer);
+  }, [prenotazioni]);
+
   async function loadVeicoli() {
     const { data } = await supabase
       .from('veicoli')
@@ -68,7 +88,65 @@ async function loadPrenotazioni() {
       .select('*, posti_auto(piano, idparcheggio, parcheggi(nome, latitudine, longitudine))') 
       .eq('idpersona', profile.idpersona)
       .order('orarioinizio', { ascending: false });
-    setPrenotazioni(data || []);
+
+    if (data) {
+      let requiresRefresh = false;
+      const now = new Date();
+
+      // IL ROBOTTINO AUTOMATICO CON I SENSORI ACCESI
+      for (const p of data) {
+        const scadenza = new Date(p.orariofine);
+
+        // 1. Controlliamo se la data è valida
+        if (isNaN(scadenza.getTime())) {
+          console.error(`🚨 ATTENZIONE: Formato data illeggibile per la sosta ${p.idprenotazione}:`, p.orariofine);
+          continue; // Salta questa sosta e passa alla successiva
+        }
+
+        if (p.stato === 'Attiva' && now > scadenza) {
+          console.log(`⏳ Sosta ${p.idprenotazione} scaduta! Tento di chiuderla nel DB...`);
+          
+          // 2. Aggiorna Prenotazione e stampa eventuali errori Supabase
+          const { error: errPrenotazione } = await supabase
+            .from('prenotazioni')
+            .update({ stato: 'Conclusa' })
+            .eq('idprenotazione', p.idprenotazione);
+            
+          if (errPrenotazione) {
+            console.error("❌ Errore Supabase su PRENOTAZIONI:", errPrenotazione.message);
+          }
+
+          // 3. Libera Posto Auto e stampa eventuali errori Supabase
+          const { error: errPosto } = await supabase
+            .from('posti_auto')
+            .update({ stato: 'Libero' })
+            .eq('idposto', p.idposto);
+            
+          if (errPosto) {
+            console.error("❌ Errore Supabase su POSTI_AUTO:", errPosto.message);
+          }
+
+          if (!errPrenotazione && !errPosto) {
+            console.log("✅ Sosta chiusa con successo nel DB!");
+            requiresRefresh = true;
+          }
+        }
+      }
+
+      // Se ha chiuso delle soste, riscarica i dati aggiornati per mostrare tutto corretto
+      if (requiresRefresh) {
+        const { data: updatedData } = await supabase
+          .from('prenotazioni')
+          .select('*, posti_auto(piano, idparcheggio, parcheggi(nome, latitudine, longitudine))') 
+          .eq('idpersona', profile.idpersona)
+          .order('orarioinizio', { ascending: false });
+        setPrenotazioni(updatedData || []);
+      } else {
+        setPrenotazioni(data);
+      }
+    } else {
+      setPrenotazioni([]);
+    }
   }
 
   const showMessage = (msg) => {
@@ -358,7 +436,7 @@ async function loadPrenotazioni() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
-                {prenoFiltrate.map(p => (
+{prenoFiltrate.map(p => (
                   <div key={p.idprenotazione} className="p-5 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:border-gray-200 transition-all flex flex-col h-full">
                     
                     <div className="flex justify-between items-start mb-4">
@@ -380,14 +458,12 @@ async function loadPrenotazioni() {
                     </div>
 
                     <div className="flex justify-between items-center flex-grow mb-2">
-                      {/* SINISTRA: Date e Costo */}
                       <div className="text-xs text-gray-600 space-y-1.5 w-full pr-4">
                         <div className="flex justify-between"><span>Arrivo:</span><span className="text-gray-900 font-bold">{formattaData(p.orarioinizio)}</span></div>
                         <div className="flex justify-between"><span>Uscita:</span><span className="text-gray-900 font-bold">{formattaData(p.orariofine)}</span></div>
                         <div className="flex justify-between pt-2 border-t border-gray-100 mt-2"><span>Costo:</span><span className="text-emerald-700 font-black">{p.costo ? `${p.costo} €` : '0.00 €'}</span></div>
                       </div>
 
-                      {/* DESTRA: Il nostro nuovo QR Code! */}
                       {p.stato === 'Attiva' && p.codiceaccesso && (
                         <div className="flex flex-col items-center bg-white p-2 rounded-xl border border-gray-200 shadow-sm shrink-0">
                            <QRCodeSVG value={p.codiceaccesso} size={64} fgColor="#064e3b" />
@@ -396,10 +472,8 @@ async function loadPrenotazioni() {
                       )}
                     </div>
 
-{/* Bottoni in basso (Soste Attive) */}
                     {p.stato === 'Attiva' && (
                       <div className="flex gap-2 mt-auto pt-4 border-t border-gray-100">
-                        {/* PULSANTE GUIDA */}
                         <button 
                           onClick={() => {
                             const park = {
@@ -415,7 +489,6 @@ async function loadPrenotazioni() {
                           Guida
                         </button>
                         
-                        {/* PULSANTE PROLUNGA */}
                         <button 
                           onClick={() => handleProlungaSosta(p)} 
                           className="flex-1 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[10px] sm:text-xs font-black tracking-wider hover:bg-emerald-100 transition-all shadow-sm"
@@ -423,7 +496,6 @@ async function loadPrenotazioni() {
                           +1 Ora
                         </button>
                         
-                        {/* PULSANTE ANNULLA */}
                         <button 
                           onClick={() => executeCancelBooking(p)} 
                           className="flex-1 py-2.5 bg-red-50 text-red-700 border border-red-200 rounded-xl text-[10px] sm:text-xs font-black tracking-wider hover:bg-red-100 transition-all shadow-sm"
@@ -433,7 +505,6 @@ async function loadPrenotazioni() {
                       </div>
                     )}
 
-                    {/* BOTTONE RECENSIONE PER SOSTE CONCLUSE */}
                     {p.stato === 'Conclusa' && (
                       <div className="flex mt-auto pt-4 border-t border-gray-100">
                         <button 

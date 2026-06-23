@@ -29,6 +29,39 @@ export default function AdminDashboard({ profile }) {
 
   useEffect(() => { loadDashboardData(); }, [chartView]);
 
+  useEffect(() => {
+    if (!showBookingsModal || allBookingsData.length === 0) return;
+
+    const timer = setInterval(() => {
+      const now = new Date();
+      let requiresUpdate = false;
+
+      // Creiamo una nuova lista aggiornando al volo quelle scadute
+      const updatedBookings = allBookingsData.map(p => {
+        if (p.stato === 'Attiva' && now > new Date(p.orariofine)) {
+          console.log(`[Admin Live] Sosta ${p.idprenotazione} scaduta in diretta. La chiudo.`);
+          requiresUpdate = true;
+          
+          // Esegue l'aggiornamento sul database in background
+          supabase.from('prenotazioni').update({ stato: 'Conclusa' }).eq('idprenotazione', p.idprenotazione).then();
+          supabase.from('posti_auto').update({ stato: 'Libero' }).eq('idposto', p.idposto).then();
+          
+          // Cambia lo stato visivamente senza dover ricaricare i dati dal server
+          return { ...p, stato: 'Conclusa' };
+        }
+        return p;
+      });
+
+      // Se ha trovato e chiuso qualcosa, aggiorna lo schermo all'istante
+      if (requiresUpdate) {
+        setAllBookingsData(updatedBookings);
+        loadDashboardData(); // Aggiorna anche i contatori (Utenti, Soste Attive, ecc.)
+      }
+    }, 5000); // Scansiona ogni 5 secondi
+
+    return () => clearInterval(timer);
+  }, [showBookingsModal, allBookingsData]);
+
   const loadDashboardData = async () => {
     // Nomi tabelle corretti in base al tuo schema SQL ufficiale
     const { count: u, data: utentiData } = await supabase.from('persone').select('*', { count: 'exact' });
@@ -107,24 +140,52 @@ export default function AdminDashboard({ profile }) {
     return d.toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
   };
 
-  const handleOpenBookings = async () => {
-  try {
-    // Usiamo l'istanza importata che ha già le chiavi dentro
-    const { data, error } = await supabase
-      .from('prenotazioni')
-      .select('*')
-      .order('orarioinizio', { ascending: false });
+const handleOpenBookings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('prenotazioni')
+        .select('*')
+        .order('orarioinizio', { ascending: false });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    console.log("Dati caricati:", data);
-    setAllBookingsData(data || []);
-    setShowBookingsModal(true);
-  } catch (err) {
-    console.error("Errore fatale:", err.message);
-    alert("Errore di connessione: " + err.message);
-  }
-};
+      console.log("Dati caricati (pre-pulizia):", data);
+
+      // --- ROBOTTINO DELL'ADMIN ---
+      const now = new Date();
+      let requiresRefresh = false;
+
+      for (const p of (data || [])) {
+        const scadenza = new Date(p.orariofine);
+        
+        // Se la sosta è attiva ma l'orario è passato...
+        if (p.stato === 'Attiva' && now > scadenza) {
+          console.log(`⏳ Admin: Chiudo sosta scaduta in background (${p.idprenotazione})`);
+          // 1. Chiude la sosta
+          await supabase.from('prenotazioni').update({ stato: 'Conclusa' }).eq('idprenotazione', p.idprenotazione);
+          // 2. Libera il posto
+          await supabase.from('posti_auto').update({ stato: 'Libero' }).eq('idposto', p.idposto);
+          requiresRefresh = true;
+        }
+      }
+
+      // Se il robottino dell'admin ha pulito qualcosa, riscarichiamo la lista aggiornata
+      if (requiresRefresh) {
+        const { data: updatedData } = await supabase
+          .from('prenotazioni')
+          .select('*')
+          .order('orarioinizio', { ascending: false });
+        setAllBookingsData(updatedData || []);
+      } else {
+        setAllBookingsData(data || []);
+      }
+
+      setShowBookingsModal(true);
+    } catch (err) {
+      console.error("Errore fatale:", err.message);
+      alert("Errore di connessione: " + err.message);
+    }
+  };
 
   const executeAdminCancelBooking = async (pren) => {
     await supabase.from('prenotazioni').update({ stato: 'Annullata' }).eq('idprenotazione', pren.idprenotazione);
