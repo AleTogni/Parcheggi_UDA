@@ -23,8 +23,17 @@ export default function Profile({ profile, refreshProfile, setDestinationParking
   const [activeTab, setActiveTab] = useState('attive');
   const [reviewModal, setReviewModal] = useState(null);
   const [reviewForm, setReviewForm] = useState({ voto: 5, testo: '' });
+  const [qrModal, setQrModal] = useState(null);
+
+  // Stato per aggiornare le barre di progresso live ogni minuto
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const tariffaOraria = 2.00;
+
+  useEffect(() => {
+    const timeInterval = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timeInterval);
+  }, []);
 
   useEffect(() => {
     if (profile) {
@@ -55,17 +64,13 @@ export default function Profile({ profile, refreshProfile, setDestinationParking
   }, [profile]);
 
   // --- ROBOTTINO IN BACKGROUND ---
-  // Controlla ogni 10 secondi se una sosta a schermo è appena scaduta
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
-      
-      // Verifica se nello stato attuale c'è una sosta attiva con tempo superato
       const sostaScaduta = prenotazioni.some(
         p => p.stato === 'Attiva' && now > new Date(p.orariofine)
       );
 
-      // Se ne becca una, risveglia la funzione principale per chiuderla sul DB!
       if (sostaScaduta) {
         loadPrenotazioni(); 
       }
@@ -82,7 +87,7 @@ export default function Profile({ profile, refreshProfile, setDestinationParking
     setVeicoli(data || []);
   }
 
-async function loadPrenotazioni() {
+  async function loadPrenotazioni() {
     const { data } = await supabase
       .from('prenotazioni')
       .select('*, posti_auto(piano, idparcheggio, parcheggi(nome, latitudine, longitudine))') 
@@ -93,47 +98,18 @@ async function loadPrenotazioni() {
       let requiresRefresh = false;
       const now = new Date();
 
-      // IL ROBOTTINO AUTOMATICO CON I SENSORI ACCESI
       for (const p of data) {
         const scadenza = new Date(p.orariofine);
 
-        // 1. Controlliamo se la data è valida
-        if (isNaN(scadenza.getTime())) {
-          console.error(`🚨 ATTENZIONE: Formato data illeggibile per la sosta ${p.idprenotazione}:`, p.orariofine);
-          continue; // Salta questa sosta e passa alla successiva
-        }
+        if (isNaN(scadenza.getTime())) continue;
 
         if (p.stato === 'Attiva' && now > scadenza) {
-          console.log(`⏳ Sosta ${p.idprenotazione} scaduta! Tento di chiuderla nel DB...`);
-          
-          // 2. Aggiorna Prenotazione e stampa eventuali errori Supabase
-          const { error: errPrenotazione } = await supabase
-            .from('prenotazioni')
-            .update({ stato: 'Conclusa' })
-            .eq('idprenotazione', p.idprenotazione);
-            
-          if (errPrenotazione) {
-            console.error("❌ Errore Supabase su PRENOTAZIONI:", errPrenotazione.message);
-          }
-
-          // 3. Libera Posto Auto e stampa eventuali errori Supabase
-          const { error: errPosto } = await supabase
-            .from('posti_auto')
-            .update({ stato: 'Libero' })
-            .eq('idposto', p.idposto);
-            
-          if (errPosto) {
-            console.error("❌ Errore Supabase su POSTI_AUTO:", errPosto.message);
-          }
-
-          if (!errPrenotazione && !errPosto) {
-            console.log("✅ Sosta chiusa con successo nel DB!");
-            requiresRefresh = true;
-          }
+          await supabase.from('prenotazioni').update({ stato: 'Conclusa' }).eq('idprenotazione', p.idprenotazione);
+          await supabase.from('posti_auto').update({ stato: 'Libero' }).eq('idposto', p.idposto);
+          requiresRefresh = true;
         }
       }
 
-      // Se ha chiuso delle soste, riscarica i dati aggiornati per mostrare tutto corretto
       if (requiresRefresh) {
         const { data: updatedData } = await supabase
           .from('prenotazioni')
@@ -282,7 +258,7 @@ async function loadPrenotazioni() {
     }]);
 
     if (error) {
-      if (error.code === '23505') { // 23505 è il codice errore di Supabase per la clausola UNIQUE
+      if (error.code === '23505') { 
         showMessage("Hai già recensito questa sosta!");
       } else {
         showMessage("Errore durante l'invio della recensione.");
@@ -299,57 +275,58 @@ async function loadPrenotazioni() {
   const prenoFiltrate = prenotazioni.filter(p => activeTab === 'attive' ? p.stato === 'Attiva' : p.stato !== 'Attiva');
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-5 sm:mt-10 relative z-0">
-      <div className="flex justify-between items-center mb-8 h-10 border-b border-gray-200 pb-4">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-5 sm:mt-10 relative z-0 transition-colors">
+      
+      <div className="flex justify-between items-center mb-8 h-10 border-b border-gray-200 dark:border-gray-800 pb-4 transition-colors">
         <div>
-          <h1 className="text-3xl font-black text-emerald-900">Area Personale</h1>
-          <p className="text-sm font-medium text-gray-500 mt-1">Gestisci i tuoi dati e le tue soste</p>
+          <h1 className="text-3xl font-black text-emerald-900 dark:text-emerald-400 transition-colors">Area Personale</h1>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1 transition-colors">Gestisci i tuoi dati e le tue soste</p>
         </div>
-        {uiMessage && <span className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md animate-fade-in-up">{uiMessage}</span>}
+        {uiMessage && <span className="bg-gray-800 dark:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md animate-fade-in-up transition-colors">{uiMessage}</span>}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* SEZIONE DATI PERSONALI */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-          <h2 className="text-xl font-bold mb-6 text-gray-800">Dati Personali</h2>
+        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col transition-colors">
+          <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-gray-100 transition-colors">Dati Personali</h2>
           <form onSubmit={handleUpdate} className="space-y-4 flex-grow flex flex-col">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nome</label>
-                <input type="text" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Nome" />
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Nome</label>
+                <input type="text" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Nome" />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cognome</label>
-                <input type="text" value={form.cognome} onChange={e => setForm({...form, cognome: e.target.value})} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Cognome" />
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Cognome</label>
+                <input type="text" value={form.cognome} onChange={e => setForm({...form, cognome: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Cognome" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Telefono</label>
-                <input type="text" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Cellulare" />
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Telefono</label>
+                <input type="text" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Cellulare" />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Città</label>
-                <input type="text" value={form.citta} onChange={e => setForm({...form, citta: e.target.value})} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Città" />
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Città</label>
+                <input type="text" value={form.citta} onChange={e => setForm({...form, citta: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Città" />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Via</label>
-                <input type="text" value={form.via} onChange={e => setForm({...form, via: e.target.value})} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Indirizzo" />
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Via</label>
+                <input type="text" value={form.via} onChange={e => setForm({...form, via: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Indirizzo" />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cap</label>
-                <input type="text" value={form.cap} onChange={e => setForm({...form, cap: e.target.value})} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Cap" />
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Cap</label>
+                <input type="text" value={form.cap} onChange={e => setForm({...form, cap: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Cap" />
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100 hover:bg-emerald-100/50 transition-colors cursor-pointer" onClick={() => setForm({...form, is_disabile: !form.is_disabile})}>
+            <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800/50 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/40 transition-colors cursor-pointer" onClick={() => setForm({...form, is_disabile: !form.is_disabile})}>
               <input type="checkbox" checked={form.is_disabile} onChange={e => setForm({...form, is_disabile: e.target.checked})} className="w-5 h-5 accent-emerald-600 cursor-pointer pointer-events-none" />
-              <label className="text-sm font-bold text-emerald-900 cursor-pointer pointer-events-none">Possiedo il Pass Disabili</label>
+              <label className="text-sm font-bold text-emerald-900 dark:text-emerald-400 cursor-pointer pointer-events-none transition-colors">Possiedo il Pass Disabili</label>
             </div>
             
             <button className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-xl font-bold shadow-sm transition-colors mt-auto">Salva Modifiche</button>
@@ -357,19 +334,19 @@ async function loadPrenotazioni() {
         </div>
 
         {/* SEZIONE VEICOLI */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-          <h2 className="text-xl font-bold mb-6 text-gray-800">
+        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col transition-colors">
+          <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-gray-100 transition-colors">
             {editingTarga ? 'Modifica Veicolo' : 'I tuoi Veicoli'}
           </h2>
           <form onSubmit={handleVeicoloAction} className="space-y-3 mb-6">
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Targa</label>
-                <input type="text" value={targa} onChange={e => setTarga(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl uppercase bg-gray-50 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-bold" placeholder="Es. AB123CD" required />
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Targa</label>
+                <input type="text" value={targa} onChange={e => setTarga(e.target.value)} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl uppercase bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-bold" placeholder="Es. AB123CD" required />
               </div>
               <div className="w-32">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Motore</label>
-                <select value={alimentazione} onChange={e => setAlimentazione(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-medium outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer">
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Motore</label>
+                <select value={alimentazione} onChange={e => setAlimentazione(e.target.value)} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 text-sm font-medium outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer">
                   <option value="Termica">Termica</option>
                   <option value="Elettrica">Elettrica</option>
                 </select>
@@ -379,7 +356,7 @@ async function loadPrenotazioni() {
                   {editingTarga ? 'Salva' : '+'}
                 </button>
                 {editingTarga && (
-                  <button type="button" onClick={() => {setEditingTarga(null); setTarga('');}} className="bg-gray-100 hover:bg-gray-200 text-gray-500 h-[46px] px-3 rounded-xl font-bold transition-colors">
+                  <button type="button" onClick={() => {setEditingTarga(null); setTarga('');}} className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 h-[46px] px-3 rounded-xl font-bold transition-colors">
                     ×
                   </button>
                 )}
@@ -388,26 +365,26 @@ async function loadPrenotazioni() {
           </form>
           
           <div className="space-y-2 overflow-y-auto max-h-[250px] custom-scrollbar pr-1">
-            {veicoli.length === 0 && <p className="text-gray-400 text-sm font-medium text-center py-4">Nessun veicolo salvato.</p>}
+            {veicoli.length === 0 && <p className="text-gray-400 dark:text-gray-500 text-sm font-medium text-center py-4 transition-colors">Nessun veicolo salvato.</p>}
             {veicoli.map(v => (
-              <div key={v.targa} className="p-3 bg-gray-50 border border-gray-100 rounded-xl flex justify-between items-center font-bold transition-colors">
+              <div key={v.targa} className="p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-xl flex justify-between items-center font-bold transition-colors">
                 
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-gray-800 tracking-wider">{v.targa}</span>
-                  <span className={`text-[10px] px-2 py-1 rounded uppercase border ${
-                    v.alimentazione === 'Elettrica' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-gray-500 border-gray-200'
+                  <span className="font-mono text-gray-800 dark:text-gray-200 tracking-wider transition-colors">{v.targa}</span>
+                  <span className={`text-[10px] px-2 py-1 rounded uppercase border transition-colors ${
+                    v.alimentazione === 'Elettrica' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/50' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'
                   }`}>
                     {v.alimentazione}
                   </span>
                 </div>
 
                 <div className="flex gap-1">
-                  <button onClick={() => startEditVeicolo(v)} className="p-2 text-gray-400 hover:text-emerald-600 transition-colors">
+                  <button onClick={() => startEditVeicolo(v)} className="p-2 text-gray-400 dark:text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
                   </button>
-                  <button onClick={() => deleteVeicolo(v.targa)} className="p-2 text-gray-400 hover:text-red-600 transition-colors">
+                  <button onClick={() => deleteVeicolo(v.targa)} className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v2m3 3h-6" />
                     </svg>
@@ -419,134 +396,219 @@ async function loadPrenotazioni() {
           </div>
         </div>
 
-        {/* STORICO PRENOTAZIONI CON QR CODE */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-800">Le tue Soste</h2>
-            <div className="flex bg-gray-100 p-1 rounded-lg">
-              <button onClick={() => setActiveTab('attive')} className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'attive' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>In corso</button>
-              <button onClick={() => setActiveTab('storico')} className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'storico' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Storico</button>
+        {/* STORICO PRENOTAZIONI (TICKET D'IMBARCO) */}
+        <div className="lg:col-span-2 bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col transition-colors">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-gray-100 dark:border-gray-800 pb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-gray-800 dark:text-gray-100 transition-colors">Le tue Soste</h2>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mt-0.5 transition-colors">Ticket digitali e storico</p>
+              </div>
+            </div>
+            <div className="flex bg-gray-100 dark:bg-gray-800 p-1.5 rounded-xl shadow-inner w-full sm:w-auto transition-colors">
+              <button onClick={() => setActiveTab('attive')} className={`flex-1 sm:flex-none px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'attive' ? 'bg-white dark:bg-gray-700 text-emerald-800 dark:text-emerald-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'}`}>In corso</button>
+              <button onClick={() => setActiveTab('storico')} className={`flex-1 sm:flex-none px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'storico' ? 'bg-white dark:bg-gray-700 text-emerald-800 dark:text-emerald-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'}`}>Storico</button>
             </div>
           </div>
           
-          <div className="overflow-y-auto max-h-[60vh] sm:h-[500px] pr-2 custom-scrollbar">
+          <div className="overflow-y-auto max-h-[600px] pr-2 custom-scrollbar">
             {prenoFiltrate.length === 0 ? (
-              <div className="h-full flex items-center justify-center">
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Nessuna prenotazione trovata</p>
+              <div className="flex items-center justify-center py-20 border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-3xl transition-colors">
+                <p className="text-gray-400 dark:text-gray-500 text-xs font-black uppercase tracking-widest transition-colors">Nessuna sosta presente</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
-{prenoFiltrate.map(p => (
-                  <div key={p.idprenotazione} className="p-5 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:border-gray-200 transition-all flex flex-col h-full">
-                    
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <span className="font-black text-gray-800 text-lg block">
-                          {p.posti_auto?.parcheggi?.nome || 'Parcheggio'}
-                        </span>
-                        <span className="font-mono text-xs text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded mt-1 inline-block">
-                          {p.targa} • {p.posti_auto?.piano}
-                        </span>
-                      </div>
-                      <span className={`text-[10px] uppercase px-2 py-1 rounded font-bold border ${
-                        p.stato === 'Attiva' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 
-                        p.stato === 'Conclusa' ? 'bg-blue-100 text-blue-800 border-blue-200' : 
-                        'bg-gray-200 text-gray-500 border-gray-300'
-                      }`}>
-                        {p.stato}
-                      </span>
-                    </div>
+              <div className="flex flex-col gap-6 pb-4">
+                {prenoFiltrate.map(p => {
+                  // Calcolo progress bar per soste attive
+                  let progress = 0;
+                  if (p.stato === 'Attiva') {
+                    const start = new Date(p.orarioinizio).getTime();
+                    const end = new Date(p.orariofine).getTime();
+                    const total = end - start;
+                    const elapsed = currentTime.getTime() - start;
+                    progress = Math.min(Math.max((elapsed / total) * 100, 0), 100);
+                  }
 
-                    <div className="flex justify-between items-center flex-grow mb-2">
-                      <div className="text-xs text-gray-600 space-y-1.5 w-full pr-4">
-                        <div className="flex justify-between"><span>Arrivo:</span><span className="text-gray-900 font-bold">{formattaData(p.orarioinizio)}</span></div>
-                        <div className="flex justify-between"><span>Uscita:</span><span className="text-gray-900 font-bold">{formattaData(p.orariofine)}</span></div>
-                        <div className="flex justify-between pt-2 border-t border-gray-100 mt-2"><span>Costo:</span><span className="text-emerald-700 font-black">{p.costo ? `${p.costo} €` : '0.00 €'}</span></div>
-                      </div>
-
-                      {p.stato === 'Attiva' && p.codiceaccesso && (
-                        <div className="flex flex-col items-center bg-white p-2 rounded-xl border border-gray-200 shadow-sm shrink-0">
-                           <QRCodeSVG value={p.codiceaccesso} size={64} fgColor="#064e3b" />
-                           <span className="text-[9px] font-black font-mono text-emerald-800 mt-1 tracking-widest">{p.codiceaccesso}</span>
+                  return (
+                    <div key={p.idprenotazione} className="flex flex-col md:flex-row bg-white dark:bg-gray-950 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 relative overflow-hidden group transition-all hover:shadow-xl">
+                      
+                      {/* Left Side (Info Ticket) */}
+                      <div className="p-6 flex-1 border-b md:border-b-0 md:border-r-2 border-dashed border-gray-200 dark:border-gray-700 relative transition-colors">
+                        
+                        {/* Cutouts per effetto strappo */}
+                        <div className="absolute -right-3 -top-3 w-6 h-6 bg-gray-50 dark:bg-gray-900 rounded-full border border-gray-200 dark:border-gray-800 hidden md:block z-10 transition-colors"></div>
+                        <div className="absolute -right-3 -bottom-3 w-6 h-6 bg-gray-50 dark:bg-gray-900 rounded-full border border-gray-200 dark:border-gray-800 hidden md:block z-10 transition-colors"></div>
+                        
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] block mb-1 transition-colors">Destinazione</span>
+                            <span className="font-black text-gray-900 dark:text-white text-2xl tracking-tight leading-none block transition-colors">
+                              {p.posti_auto?.parcheggi?.nome || 'Parcheggio'}
+                            </span>
+                          </div>
+                          <span className={`text-[9px] uppercase px-3 py-1.5 rounded-full font-black tracking-widest border shadow-sm transition-colors flex items-center gap-1.5 ${
+                            p.stato === 'Attiva' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50' : 
+                            p.stato === 'Conclusa' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/50' : 
+                            'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-700'
+                          }`}>
+                            {p.stato === 'Attiva' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span>}
+                            {p.stato}
+                          </span>
                         </div>
-                      )}
+
+                        <div className="grid grid-cols-3 gap-4 mb-5 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800 transition-colors">
+                          <div>
+                            <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 transition-colors">Targa</span>
+                            <span className="font-mono font-black text-gray-800 dark:text-gray-200 text-sm transition-colors">{p.targa}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 transition-colors">Stallo</span>
+                            <span className="font-black text-gray-800 dark:text-gray-200 text-sm transition-colors">{p.posti_auto?.piano}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 transition-colors">Costo</span>
+                            <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm transition-colors">{p.costo ? `${p.costo} €` : '0.00 €'}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 transition-colors">
+                          <span>{formattaData(p.orarioinizio)}</span>
+                          <svg className="w-4 h-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                          <span>{formattaData(p.orariofine)}</span>
+                        </div>
+
+                        {/* Barra Progresso Live (Solo Attive) */}
+                        {p.stato === 'Attiva' && (
+                          <div className="mt-4">
+                            <div className="flex justify-between items-center mb-1.5">
+                              <span className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Avanzamento sosta</span>
+                              <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400">{Math.round(progress)}%</span>
+                            </div>
+                            <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shadow-inner transition-colors">
+                              <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-1000 rounded-full" style={{ width: `${progress}%` }}></div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Azioni Sosta */}
+                        {p.stato === 'Attiva' && (
+                          <div className="flex gap-2 mt-5">
+                            <button onClick={() => { const park = { nome: p.posti_auto.parcheggi.nome, latitudine: p.posti_auto.parcheggi.latitudine, longitudine: p.posti_auto.parcheggi.longitudine }; setDestinationParking(park); navigate('/'); }} className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-[10px] sm:text-xs font-black tracking-widest transition-all shadow-sm uppercase active:scale-95">
+                              <span className="flex items-center justify-center gap-1.5">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+                                Naviga
+                              </span>
+                            </button>
+                            <button onClick={() => handleProlungaSosta(p)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-2xl text-[10px] sm:text-xs font-black tracking-widest hover:bg-gray-200 dark:hover:bg-gray-700 transition-all shadow-sm uppercase active:scale-95">+1 Ora</button>
+                            <button onClick={() => executeCancelBooking(p)} className="py-3 px-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-2xl text-xs font-black hover:bg-red-100 dark:hover:bg-red-900/40 transition-all shadow-sm active:scale-95">✕</button>
+                          </div>
+                        )}
+
+                        {p.stato === 'Conclusa' && (
+                          <div className="mt-5">
+                            <button onClick={() => { setReviewModal(p); setReviewForm({ voto: 5, testo: '' }); }} className="w-full py-3 bg-gray-900 dark:bg-gray-800 hover:bg-black dark:hover:bg-gray-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2">
+                              <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                              Lascia una Recensione
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right Side (QR CODE Ticket) */}
+                      {/* Desktop: sempre visibile | Mobile: bottone che apre il modale */}
+                      <div className={`shrink-0 relative transition-colors ${p.stato !== 'Attiva' ? 'hidden md:flex opacity-50 grayscale' : ''}`}>
+                        {/* Desktop view */}
+                        <div className="hidden md:flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-gray-900/50 w-56 h-full transition-colors">
+                          <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 text-center transition-colors">Codice Accesso</span>
+                          <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-2 transition-colors">
+                            <QRCodeSVG value={p.codiceaccesso || '000000'} size={100} fgColor="#000000" bgColor="#ffffff" />
+                          </div>
+                          <span className="font-mono font-black text-gray-800 dark:text-gray-200 tracking-[0.3em] text-lg transition-colors">{p.codiceaccesso || '------'}</span>
+                        </div>
+
+                        {/* Mobile: bottone compatto */}
+                        {p.stato === 'Attiva' && (
+                          <button
+                            onClick={() => setQrModal(p)}
+                            className="md:hidden flex items-center gap-3 w-full px-5 py-3 bg-emerald-50 dark:bg-emerald-900/20 border-t border-dashed border-emerald-200 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors group"
+                          >
+                            <div className="bg-white dark:bg-gray-900 p-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800/50 shadow-sm">
+                              <QRCodeSVG value={p.codiceaccesso || '000000'} size={28} fgColor="#000000" bgColor="#ffffff" />
+                            </div>
+                            <div className="flex-1 text-left">
+                              <span className="block text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Codice Accesso</span>
+                              <span className="font-mono font-black text-gray-800 dark:text-gray-200 tracking-[0.2em] text-sm">{p.codiceaccesso || '------'}</span>
+                            </div>
+                            <svg className="w-4 h-4 text-emerald-500 dark:text-emerald-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+
                     </div>
-
-                    {p.stato === 'Attiva' && (
-                      <div className="flex gap-2 mt-auto pt-4 border-t border-gray-100">
-                        <button 
-                          onClick={() => {
-                            const park = {
-                              nome: p.posti_auto.parcheggi.nome,
-                              latitudine: p.posti_auto.parcheggi.latitudine,
-                              longitudine: p.posti_auto.parcheggi.longitudine
-                            };
-                            setDestinationParking(park);
-                            navigate('/');
-                          }}
-                          className="flex-1 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-[10px] sm:text-xs font-black tracking-wider hover:bg-blue-100 transition-all shadow-sm"
-                        >
-                          Guida
-                        </button>
-                        
-                        <button 
-                          onClick={() => handleProlungaSosta(p)} 
-                          className="flex-1 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[10px] sm:text-xs font-black tracking-wider hover:bg-emerald-100 transition-all shadow-sm"
-                        >
-                          +1 Ora
-                        </button>
-                        
-                        <button 
-                          onClick={() => executeCancelBooking(p)} 
-                          className="flex-1 py-2.5 bg-red-50 text-red-700 border border-red-200 rounded-xl text-[10px] sm:text-xs font-black tracking-wider hover:bg-red-100 transition-all shadow-sm"
-                        >
-                          Annulla
-                        </button>
-                      </div>
-                    )}
-
-                    {p.stato === 'Conclusa' && (
-                      <div className="flex mt-auto pt-4 border-t border-gray-100">
-                        <button 
-                          onClick={() => { setReviewModal(p); setReviewForm({ voto: 5, testo: '' }); }}
-                          className="w-full py-2.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-xl text-[10px] sm:text-xs font-black tracking-wider hover:bg-yellow-100 transition-all shadow-sm flex items-center justify-center gap-2"
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                          Valuta Sosta
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
 
         {/* ZONA ROSSA */}
-        <div className="lg:col-span-2 bg-red-50 p-6 rounded-2xl border border-red-100 shadow-sm mt-4">
-          <h2 className="text-lg font-black text-red-900 mb-2">Zona di Pericolo</h2>
-          <p className="text-sm text-red-700 mb-4 font-medium">Questa azione eliminerà definitivamente il tuo account, le tue targhe e tutto il tuo storico dal nostro database. L'operazione non può essere annullata.</p>
-          <button onClick={handleDeleteAccount} className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold shadow-sm hover:bg-red-700 transition-all border border-red-700">Elimina Definitivamente Account</button>
+        <div className="lg:col-span-2 bg-red-50 dark:bg-red-900/10 p-6 sm:p-8 rounded-3xl border border-red-200 dark:border-red-900/30 shadow-sm mt-4 transition-colors">
+          <div className="flex items-center gap-3 mb-3">
+            <svg className="w-6 h-6 text-red-600 dark:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <h2 className="text-xl font-black text-red-900 dark:text-red-400 transition-colors">Zona di Pericolo</h2>
+          </div>
+          <p className="text-sm text-red-700 dark:text-red-300/80 mb-6 font-medium leading-relaxed max-w-3xl transition-colors">Questa azione eliminerà definitivamente il tuo account, le tue targhe e tutto il tuo storico dal nostro database. L'operazione non può essere annullata ed è permanente.</p>
+          <button onClick={handleDeleteAccount} className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Elimina Account</button>
         </div>
 
       </div>
-      {/* MODAL RECENSIONE */}
-      {reviewModal && (
-        <div onClick={() => setReviewModal(null)} className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] transition-all">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white p-6 sm:p-8 rounded-3xl max-w-md w-full shadow-2xl relative animate-scale-up">
-            <button onClick={() => setReviewModal(null)} className="absolute top-4 right-4 text-2xl font-bold text-gray-300 hover:text-gray-800 transition-colors">&times;</button>
-            
-            <h2 className="text-2xl font-black text-gray-900 mb-1">Com'è andata?</h2>
-            <p className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-widest">{reviewModal.posti_auto?.parcheggi?.nome}</p>
 
-            {/* Selettore Stelle */}
-            <div className="flex justify-center gap-2 mb-6">
+      {/* MODAL QR CODE (Mobile) */}
+      {qrModal && (
+        <div onClick={() => setQrModal(null)} className="fixed inset-0 bg-gray-900/90 backdrop-blur-sm flex items-center justify-center p-6 z-[100]">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white dark:bg-gray-900 p-8 rounded-[2.5rem] max-w-xs w-full shadow-2xl relative border border-gray-200 dark:border-gray-800 flex flex-col items-center">
+            <button onClick={() => setQrModal(null)} className="absolute top-5 right-5 text-2xl font-bold text-gray-300 dark:text-gray-600 hover:text-gray-800 dark:hover:text-gray-300 transition-colors">&times;</button>
+
+            <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Codice Accesso</span>
+            <span className="font-black text-gray-900 dark:text-white text-lg mb-5 truncate max-w-full">
+              {qrModal.posti_auto?.parcheggi?.nome || 'Parcheggio'}
+            </span>
+
+            <div className="bg-white p-4 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 mb-5">
+              <QRCodeSVG value={qrModal.codiceaccesso || '000000'} size={200} fgColor="#000000" bgColor="#ffffff" />
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl px-6 py-3 border border-gray-100 dark:border-gray-700 mb-2">
+              <span className="font-mono font-black text-gray-800 dark:text-gray-200 tracking-[0.35em] text-2xl">{qrModal.codiceaccesso || '------'}</span>
+            </div>
+
+            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-2">Mostra all'ingresso</span>
+          </div>
+        </div>
+      )}
+
+      {reviewModal && (
+        <div onClick={() => setReviewModal(null)} className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100] transition-all">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white dark:bg-gray-900 p-6 sm:p-10 rounded-[2.5rem] max-w-md w-full shadow-2xl relative animate-scale-up border border-gray-200 dark:border-gray-800 transition-colors">
+            <button onClick={() => setReviewModal(null)} className="absolute top-5 right-5 text-2xl font-bold text-gray-300 dark:text-gray-600 hover:text-gray-800 dark:hover:text-gray-300 transition-colors">&times;</button>
+            
+            <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-1 tracking-tight transition-colors">Com'è andata?</h2>
+            <p className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-8 uppercase tracking-widest transition-colors">{reviewModal.posti_auto?.parcheggi?.nome}</p>
+
+            <div className="flex justify-center gap-3 mb-8 bg-gray-50 dark:bg-gray-800/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 transition-colors">
               {[1, 2, 3, 4, 5].map((star) => (
                 <svg 
                   key={star}
                   onClick={() => setReviewForm({ ...reviewForm, voto: star })}
-                  className={`w-10 h-10 cursor-pointer transition-all hover:scale-110 ${reviewForm.voto >= star ? 'text-yellow-400' : 'text-gray-200'}`} 
+                  className={`w-12 h-12 cursor-pointer transition-all hover:scale-110 drop-shadow-sm ${reviewForm.voto >= star ? 'text-yellow-400' : 'text-gray-200 dark:text-gray-700'}`} 
                   fill="currentColor" viewBox="0 0 20 20"
                 >
                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
@@ -558,12 +620,12 @@ async function loadPrenotazioni() {
               placeholder="Scrivi una breve recensione (opzionale)..."
               value={reviewForm.testo}
               onChange={(e) => setReviewForm({ ...reviewForm, testo: e.target.value })}
-              className="w-full p-4 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:ring-2 focus:ring-yellow-400 transition-all text-sm font-medium resize-none h-28 mb-4"
+              className="w-full p-5 rounded-2xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-800 outline-none focus:ring-2 focus:ring-yellow-400 transition-all text-sm font-medium resize-none h-32 mb-6 shadow-inner"
             ></textarea>
 
             <button 
               onClick={handleSubmitReview}
-              className="w-full bg-yellow-400 text-yellow-950 py-3.5 rounded-xl font-black text-sm uppercase tracking-widest shadow-md hover:bg-yellow-500 transition-all"
+              className="w-full bg-yellow-400 hover:bg-yellow-500 text-yellow-950 py-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-md transition-all active:scale-95"
             >
               Invia Recensione
             </button>
