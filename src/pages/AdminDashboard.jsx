@@ -173,10 +173,18 @@ export default function AdminDashboard({ profile }) {
 
   const handleOpenBookings = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: rawData, error } = await supabase
         .from('prenotazioni')
-        .select('*')
+        .select('*, posti_auto(piano, idparcheggio, parcheggi(nome))')
         .order('orarioinizio', { ascending: false });
+
+      // Normalizza i nomi per compatibilità col resto del codice (CSV, lista)
+      const data = (rawData || []).map(p => ({
+        ...p,
+        nomeParcheggi: p.posti_auto?.parcheggi?.nome || '—',
+        pianoPosto: p.posti_auto?.piano || '—',
+        idparcheggio: p.posti_auto?.idparcheggio ?? p.idparcheggio,
+      }));
 
       if (error) throw error;
 
@@ -185,7 +193,7 @@ export default function AdminDashboard({ profile }) {
       const now = new Date();
       let requiresRefresh = false;
 
-      for (const p of (data || [])) {
+      for (const p of data) {
         const scadenza = new Date(p.orariofine);
         
         if (p.stato === 'Attiva' && now > scadenza) {
@@ -197,13 +205,19 @@ export default function AdminDashboard({ profile }) {
       }
 
       if (requiresRefresh) {
-        const { data: updatedData } = await supabase
+        const { data: updatedRaw } = await supabase
           .from('prenotazioni')
-          .select('*')
+          .select('*, posti_auto(piano, idparcheggio, parcheggi(nome))')
           .order('orarioinizio', { ascending: false });
-        setAllBookingsData(updatedData || []);
+        const updatedData = (updatedRaw || []).map(p => ({
+          ...p,
+          nomeParcheggi: p.posti_auto?.parcheggi?.nome || '—',
+          pianoPosto: p.posti_auto?.piano || '—',
+          idparcheggio: p.posti_auto?.idparcheggio ?? p.idparcheggio,
+        }));
+        setAllBookingsData(updatedData);
       } else {
-        setAllBookingsData(data || []);
+        setAllBookingsData(data);
       }
 
       setShowBookingsModal(true);

@@ -67,17 +67,17 @@ export default function Profile({ profile, refreshProfile, setDestinationParking
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
-      const sostaScaduta = prenotazioni.some(
-        p => p.stato === 'Attiva' && now > new Date(p.orariofine)
-      );
-
-      if (sostaScaduta) {
-        loadPrenotazioni(); 
-      }
+      setPrenotazioni(prev => {
+        const sostaScaduta = prev.some(
+          p => p.stato === 'Attiva' && now > new Date(p.orariofine)
+        );
+        if (sostaScaduta) loadPrenotazioni();
+        return prev;
+      });
     }, 10000); // 10 secondi
 
     return () => clearInterval(timer);
-  }, [prenotazioni]);
+  }, []);
 
   async function loadVeicoli() {
     const { data } = await supabase
