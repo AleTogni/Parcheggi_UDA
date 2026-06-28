@@ -27,6 +27,9 @@ export default function AdminDashboard({ profile }) {
   
   const [newParking, setNewParking] = useState({ nome: '', postitot: 100, coperto: true, latitudine: 45.5416, longitudine: 10.2167 });
   const [newSpot, setNewSpot] = useState({ idparcheggio: '', piano: '', tipoposto: 'Standard' });
+  const [coordMode, setCoordMode] = useState('map'); // 'map' | 'manual'
+  const [latInput, setLatInput] = useState('45.54160');
+  const [lngInput, setLngInput] = useState('10.21670');
   const [uiMessage, setUiMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -296,6 +299,8 @@ export default function AdminDashboard({ profile }) {
     else { 
       showMessage("Impianto creato."); 
       setNewParking({ nome: '', postitot: 100, coperto: true, latitudine: 45.5416, longitudine: 10.2167 });
+      setLatInput('45.54160');
+      setLngInput('10.21670');
       loadDashboardData(); 
     }
   };
@@ -403,15 +408,67 @@ export default function AdminDashboard({ profile }) {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide text-emerald-600 dark:text-emerald-500">Lat (Auto)</label>
-                  <input type="text" readOnly value={newParking.latitudine.toFixed(5)} className="w-full p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 font-mono text-emerald-900 dark:text-emerald-400 transition-colors" />
+
+              {/* Coordinate — toggle mappa/manuale */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Coordinate GPS</label>
+                  <div className="flex bg-gray-100 dark:bg-gray-800 p-0.5 rounded-lg">
+                    <button type="button" onClick={() => setCoordMode('map')} className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wide transition-all ${coordMode === 'map' ? 'bg-white dark:bg-gray-700 text-emerald-700 dark:text-emerald-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
+                      🗺 Mappa
+                    </button>
+                    <button type="button" onClick={() => setCoordMode('manual')} className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wide transition-all ${coordMode === 'manual' ? 'bg-white dark:bg-gray-700 text-emerald-700 dark:text-emerald-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
+                      ✏️ Manuale
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide text-emerald-600 dark:text-emerald-500">Lng (Auto)</label>
-                  <input type="text" readOnly value={newParking.longitudine.toFixed(5)} className="w-full p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 font-mono text-emerald-900 dark:text-emerald-400 transition-colors" />
-                </div>
+
+                {coordMode === 'manual' ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-500 mb-1 uppercase tracking-wide">Latitudine</label>
+                      <input
+                        type="text"
+                        value={latInput}
+                        onChange={e => {
+                          setLatInput(e.target.value);
+                          const v = parseFloat(e.target.value);
+                          if (!isNaN(v)) setNewParking(prev => ({ ...prev, latitudine: v }));
+                        }}
+                        className="w-full p-3 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 font-mono text-emerald-900 dark:text-emerald-400 outline-none focus:border-emerald-500 transition-colors text-sm"
+                        placeholder="45.54160"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-500 mb-1 uppercase tracking-wide">Longitudine</label>
+                      <input
+                        type="text"
+                        value={lngInput}
+                        onChange={e => {
+                          setLngInput(e.target.value);
+                          const v = parseFloat(e.target.value);
+                          if (!isNaN(v)) setNewParking(prev => ({ ...prev, longitudine: v }));
+                        }}
+                        className="w-full p-3 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 font-mono text-emerald-900 dark:text-emerald-400 outline-none focus:border-emerald-500 transition-colors text-sm"
+                        placeholder="10.21670"
+                      />
+                    </div>
+                    <p className="col-span-2 text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                      Oppure usa la scheda Mappa per cliccare direttamente sul punto.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-500 mb-1 uppercase tracking-wide">Lat (da mappa)</label>
+                      <input type="text" readOnly value={newParking.latitudine.toFixed(5)} className="w-full p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 font-mono text-emerald-900 dark:text-emerald-400 transition-colors text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-500 mb-1 uppercase tracking-wide">Lng (da mappa)</label>
+                      <input type="text" readOnly value={newParking.longitudine.toFixed(5)} className="w-full p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 font-mono text-emerald-900 dark:text-emerald-400 transition-colors text-sm" />
+                    </div>
+                  </div>
+                )}
               </div>
               <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-all shadow-sm">
                 Salva Impianto
@@ -421,13 +478,18 @@ export default function AdminDashboard({ profile }) {
             {/* Mappa Interattiva */}
             <div className="relative h-64 md:h-full rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-sm z-0">
               <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[400] bg-emerald-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-md whitespace-nowrap">
-                Clicca per posizionare
+                {coordMode === 'map' ? 'Clicca per posizionare' : 'Anteprima posizione'}
               </div>
-              <MapContainer center={[45.5416, 10.2167]} zoom={13} style={{ height: '100%', width: '100%' }}>
+              <MapContainer center={[newParking.latitudine, newParking.longitudine]} zoom={13} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                 <LocationSelector 
                   position={{ lat: newParking.latitudine, lng: newParking.longitudine }} 
-                  setPosition={(pos) => setNewParking({...newParking, latitudine: pos.lat, longitudine: pos.lng})} 
+                  setPosition={(pos) => {
+                    setNewParking({...newParking, latitudine: pos.lat, longitudine: pos.lng});
+                    setLatInput(pos.lat.toFixed(5));
+                    setLngInput(pos.lng.toFixed(5));
+                    if (coordMode !== 'map') setCoordMode('map');
+                  }} 
                 />
               </MapContainer>
             </div>

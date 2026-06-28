@@ -288,111 +288,190 @@ export default function Profile({ profile, refreshProfile, setDestinationParking
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* SEZIONE DATI PERSONALI */}
-        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col transition-colors">
-          <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-gray-100 transition-colors">Dati Personali</h2>
-          <form onSubmit={handleUpdate} className="space-y-4 flex-grow flex flex-col">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Nome</label>
-                <input type="text" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Nome" />
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden transition-colors">
+          
+          {/* Header card con avatar */}
+          <div className="bg-gradient-to-br from-emerald-700 to-emerald-600 px-6 pt-6 pb-8 relative">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-3xl font-black text-white shadow-inner shrink-0">
+                {(form.nome?.charAt(0) || '?').toUpperCase()}
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Cognome</label>
-                <input type="text" value={form.cognome} onChange={e => setForm({...form, cognome: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Cognome" />
+                <p className="text-emerald-100/70 text-[10px] font-black uppercase tracking-widest">Profilo</p>
+                <h2 className="text-xl font-black text-white leading-tight">{form.nome} {form.cognome}</h2>
+                <p className="text-emerald-200/70 text-xs font-medium mt-0.5">{profile?.email}</p>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleUpdate} className="p-6 flex flex-col gap-5 flex-grow">
+
+            {/* Dati anagrafici */}
+            <div>
+              <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Anagrafica</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5 tracking-wide transition-colors">Nome</label>
+                  <input type="text" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Nome" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5 tracking-wide transition-colors">Cognome</label>
+                  <input type="text" value={form.cognome} onChange={e => setForm({...form, cognome: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Cognome" />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Contatti */}
+            <div>
+              <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Contatti</p>
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Telefono</label>
-                <input type="text" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Cellulare" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Città</label>
-                <input type="text" value={form.citta} onChange={e => setForm({...form, citta: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Città" />
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5 tracking-wide transition-colors">Telefono</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                  </span>
+                  <input type="text" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} className="w-full pl-9 pr-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="+39 000 000 0000" />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2">
-                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Via</label>
-                <input type="text" value={form.via} onChange={e => setForm({...form, via: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Indirizzo" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Cap</label>
-                <input type="text" value={form.cap} onChange={e => setForm({...form, cap: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Cap" />
+            {/* Indirizzo */}
+            <div>
+              <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Indirizzo</p>
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5 tracking-wide transition-colors">Via</label>
+                    <input type="text" value={form.via} onChange={e => setForm({...form, via: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Via Roma, 1" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5 tracking-wide transition-colors">CAP</label>
+                    <input type="text" value={form.cap} onChange={e => setForm({...form, cap: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="25100" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5 tracking-wide transition-colors">Città</label>
+                  <input type="text" value={form.citta} onChange={e => setForm({...form, citta: e.target.value})} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium" placeholder="Brescia" />
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800/50 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/40 transition-colors cursor-pointer" onClick={() => setForm({...form, is_disabile: !form.is_disabile})}>
-              <input type="checkbox" checked={form.is_disabile} onChange={e => setForm({...form, is_disabile: e.target.checked})} className="w-5 h-5 accent-emerald-600 cursor-pointer pointer-events-none" />
-              <label className="text-sm font-bold text-emerald-900 dark:text-emerald-400 cursor-pointer pointer-events-none transition-colors">Possiedo il Pass Disabili</label>
-            </div>
-            
-            <button className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-xl font-bold shadow-sm transition-colors mt-auto">Salva Modifiche</button>
+            {/* Toggle disabile */}
+            <button type="button" onClick={() => setForm({...form, is_disabile: !form.is_disabile})} className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left ${form.is_disabile ? 'border-emerald-400 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600'}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${form.is_disabile ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500'}`}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11v4m0 4h.01M8 21h8"/></svg>
+              </div>
+              <div className="flex-1">
+                <p className={`text-sm font-black transition-colors ${form.is_disabile ? 'text-emerald-800 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300'}`}>Pass Disabili</p>
+                <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 mt-0.5">Abilita l'accesso agli stalli riservati</p>
+              </div>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${form.is_disabile ? 'border-emerald-500 bg-emerald-500' : 'border-gray-300 dark:border-gray-600'}`}>
+                {form.is_disabile && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>}
+              </div>
+            </button>
+
+            <button type="submit" className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-xl font-black text-sm shadow-sm transition-all active:scale-[0.98] mt-auto">
+              Salva Modifiche
+            </button>
           </form>
         </div>
 
         {/* SEZIONE VEICOLI */}
-        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col transition-colors">
-          <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-gray-100 transition-colors">
-            {editingTarga ? 'Modifica Veicolo' : 'I tuoi Veicoli'}
-          </h2>
-          <form onSubmit={handleVeicoloAction} className="space-y-3 mb-6">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Targa</label>
-                <input type="text" value={targa} onChange={e => setTarga(e.target.value)} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl uppercase bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-bold" placeholder="Es. AB123CD" required />
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden transition-colors">
+          
+          {/* Header */}
+          <div className="px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0 transition-colors">
+                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2.5.5M13 16H5.5M13 16l2.5.5M19 16h.5a1 1 0 00.95-.68l1.05-3.16A1 1 0 0020.5 11H16l-2-5H9"/></svg>
               </div>
-              <div className="w-32">
-                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 transition-colors">Motore</label>
-                <select value={alimentazione} onChange={e => setAlimentazione(e.target.value)} className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 text-sm font-medium outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer">
-                  <option value="Termica">Termica</option>
-                  <option value="Elettrica">Elettrica</option>
-                </select>
-              </div>
-              <div className="flex items-end gap-1">
-                <button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white h-[46px] px-6 rounded-xl font-black shadow-sm transition-colors">
-                  {editingTarga ? 'Salva' : '+'}
-                </button>
-                {editingTarga && (
-                  <button type="button" onClick={() => {setEditingTarga(null); setTarga('');}} className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 h-[46px] px-3 rounded-xl font-bold transition-colors">
-                    ×
-                  </button>
-                )}
+              <div>
+                <h2 className="text-lg font-black text-gray-800 dark:text-gray-100 transition-colors">
+                  {editingTarga ? <span className="text-emerald-700 dark:text-emerald-400">Modifica Veicolo</span> : 'I tuoi Veicoli'}
+                </h2>
+                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-0.5">{veicoli.length} registrat{veicoli.length === 1 ? 'o' : 'i'}</p>
               </div>
             </div>
-          </form>
-          
-          <div className="space-y-2 overflow-y-auto max-h-[250px] custom-scrollbar pr-1">
-            {veicoli.length === 0 && <p className="text-gray-400 dark:text-gray-500 text-sm font-medium text-center py-4 transition-colors">Nessun veicolo salvato.</p>}
-            {veicoli.map(v => (
-              <div key={v.targa} className="p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-xl flex justify-between items-center font-bold transition-colors">
-                
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-gray-800 dark:text-gray-200 tracking-wider transition-colors">{v.targa}</span>
-                  <span className={`text-[10px] px-2 py-1 rounded uppercase border transition-colors ${
-                    v.alimentazione === 'Elettrica' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/50' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'
-                  }`}>
-                    {v.alimentazione}
-                  </span>
-                </div>
+          </div>
 
-                <div className="flex gap-1">
-                  <button onClick={() => startEditVeicolo(v)} className="p-2 text-gray-400 dark:text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                  </button>
-                  <button onClick={() => deleteVeicolo(v.targa)} className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v2m3 3h-6" />
-                    </svg>
-                  </button>
-                </div>
+          <div className="p-6 flex flex-col gap-5 flex-grow">
 
+            {/* Form aggiungi/modifica */}
+            <form onSubmit={handleVeicoloAction} className={`p-4 rounded-2xl border-2 transition-all ${editingTarga ? 'border-emerald-400 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/10' : 'border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30'}`}>
+              <p className="text-[10px] font-black uppercase tracking-widest mb-3 ${editingTarga ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}">
+                {editingTarga ? `✏️ Modifica: ${editingTarga}` : '+ Aggiungi veicolo'}
+              </p>
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5 tracking-wide transition-colors">Targa</label>
+                  <input
+                    type="text"
+                    value={targa}
+                    onChange={e => setTarga(e.target.value)}
+                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl uppercase bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-black tracking-widest"
+                    placeholder="AB123CD"
+                    required
+                  />
+                </div>
+                <div className="w-36">
+                  <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5 tracking-wide transition-colors">Alimentazione</label>
+                  <select
+                    value={alimentazione}
+                    onChange={e => setAlimentazione(e.target.value)}
+                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
+                  >
+                    <option value="Termica">⛽ Termica</option>
+                    <option value="Elettrica">⚡ Elettrica</option>
+                  </select>
+                </div>
+                <div className="flex gap-1.5 items-end">
+                  <button type="submit" className={`h-[46px] px-5 rounded-xl font-black text-sm shadow-sm transition-all active:scale-95 text-white ${editingTarga ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 dark:hover:bg-gray-600'}`}>
+                    {editingTarga ? 'Salva' : '+'}
+                  </button>
+                  {editingTarga && (
+                    <button type="button" onClick={() => { setEditingTarga(null); setTarga(''); setAlimentazione('Termica'); }} className="h-[46px] px-3 rounded-xl font-black text-sm bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                      ×
+                    </button>
+                  )}
+                </div>
               </div>
-            ))}
+            </form>
+
+            {/* Lista veicoli */}
+            <div className="space-y-2.5 overflow-y-auto max-h-[260px] custom-scrollbar pr-1">
+              {veicoli.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
+                    <svg className="w-6 h-6 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+                  </div>
+                  <p className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest">Nessun veicolo salvato</p>
+                </div>
+              ) : veicoli.map(v => (
+                <div key={v.targa} className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all group ${editingTarga === v.targa ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/10' : 'border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700'}`}>
+
+                  {/* Icona tipo */}
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg transition-colors ${v.alimentazione === 'Elettrica' ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                    {v.alimentazione === 'Elettrica' ? '⚡' : '⛽'}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <span className="font-mono font-black text-gray-800 dark:text-gray-200 tracking-widest text-sm transition-colors block">{v.targa}</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wide transition-colors ${v.alimentazione === 'Elettrica' ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                      {v.alimentazione}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => startEditVeicolo(v)} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
+                    <button onClick={() => deleteVeicolo(v.targa)} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v2m-2 0h10" /></svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -509,14 +588,14 @@ export default function Profile({ profile, refreshProfile, setDestinationParking
                           </div>
                         )}
 
-                        {p.stato === 'Conclusa' && (
-                          <div className="mt-5">
-                            <button onClick={() => { setReviewModal(p); setReviewForm({ voto: 5, testo: '' }); }} className="w-full py-3 bg-gray-900 dark:bg-gray-800 hover:bg-black dark:hover:bg-gray-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2">
-                              <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                              Lascia una Recensione
-                            </button>
-                          </div>
-                        )}
+                          {p.stato === 'Conclusa' && (
+                            <div className="mt-5">
+                              <button onClick={() => { setReviewModal(p); setReviewForm({ voto: 5, testo: '' }); }} className="w-full py-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2">
+                                <svg className="w-4 h-4 text-yellow-400 drop-shadow-sm" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                Lascia una Recensione
+                              </button>
+                            </div>
+                          )}
                       </div>
 
                       {/* Right Side (QR CODE Ticket) */}
